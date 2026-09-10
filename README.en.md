@@ -2,24 +2,24 @@
 
 **[العربية](README.md)**
 
-> Your OpenCode subscription just hit a rate limit mid-refactor. Antigravity didn't. This is the bridge.
+> Let's be honest: the Antigravity app is rough, neglected, and nobody enjoys its interface.. but its quota and models are free, and free is too good to waste! So we pulled its API out from under the hood and wired it into OpenCode — finish your work in the editor you love without paying one extra cent.
 
-Antigravity's built-in models as a local Anthropic-compatible (and OpenAI-compatible) API. A Go service shipping as **one static binary** — no Node, no CDN, no sidecar files.
+Antigravity's internal models, running for you as a local API fully compatible with Anthropic and OpenAI. A lightweight Go service in **one static binary** — no Node, no CDN headaches, no sidecar files nagging you.
 
-## The crisis
+## The disaster that keeps happening
 
-You already pay for OpenCode. Then a long session gets **rejected outright** (happened to a real 669k-token session), a tool-heavy setup slams into a **100-tool ceiling**, a refactor dies on a **429** with three files to go, and the meter keeps running while you stare at `retry-after`.
+You paid good money for an OpenCode subscription, then mid-way through a long coding session the reply gets **rejected straight to your face** (happened in a real session that burned 669k tokens!), or you suddenly slam into the **100-tool ceiling**, or all work halts out of nowhere with a **429** while you've only got a few files left to finish — and the meter keeps charging while you zone out at the `retry-after` screen.
 
-Point OpenCode at `http://127.0.0.1:8964` and burn **Antigravity's weekly quota** instead — Gemini + Claude, same agent loop. When one Google account taps out, the request **transparently fails over to the next account**. You see one good response, not an error.
+Instead of wrestling with Antigravity's miserable app and its tired experience, point OpenCode at `http://127.0.0.1:8964` and burn **Antigravity's weekly quota** off the shelf — Gemini + Claude working with you in the same agent loop. And when the first Google account runs dry, the request **quietly and automatically moves to the second account**. You get the full, correct reply without ever smelling an error.
 
-## Why OpenCode users care
+## Why OpenCode users will love it
 
-- **Both protocols:** `POST /v1/messages` (Anthropic) and `POST /v1/chat/completions` (OpenAI) — streaming, tools, images, thinking blocks.
-- **Built for long sessions:** 100,000 messages and 10,000 tools per request.
-- **Survives quota death:** one account serves everything until `429 quota_exhausted` — then cooldown, demote, transparent retry, persisted across restarts.
-- **One file:** embedded dashboard (`go:embed`), works offline.
+* **Both protocols supported:** `POST /v1/messages` (Anthropic) and `POST /v1/chat/completions` (OpenAI) — with streaming, tool calls, images, and thinking blocks.
+* **Built for heavy sessions:** handles up to 100,000 messages and 10,000 tools per request.
+* **Doesn't die when quota runs out:** one account serves you until it slaps you with `429 quota_exhausted` — then it rests the account, benches it to the reserves, and automatically retries with another account. All of it persisted even if you stop and restart the server.
+* **Just one file:** dashboard embedded inside the binary (`go:embed`), lightweight and working offline with no internet.
 
-Quickest wiring ([OpenCode provider docs](https://opencode.ai/docs/providers/) `baseURL` pattern):
+Fastest wiring (from the [OpenCode providers docs](https://opencode.ai/docs/providers/), `baseURL` style):
 
 ```json
 {
@@ -32,7 +32,7 @@ Quickest wiring ([OpenCode provider docs](https://opencode.ai/docs/providers/) `
 }
 ```
 
-Or as a dedicated local provider (Ollama-style shape):
+Or as a dedicated local provider (same way as Ollama):
 
 ```json
 {
@@ -50,103 +50,103 @@ Or as a dedicated local provider (Ollama-style shape):
 }
 ```
 
-Dummy key everywhere (`ANTHROPIC_API_KEY=dummy`) — loopback proxy, no key needed.
+Use any dummy key you like (`ANTHROPIC_API_KEY=dummy`) — the server runs as a local loopback proxy, so it doesn't need a real key at all.
 
-## Run
+## How to run it?
 
-Requires **Go 1.25.7+** only.
+All it asks for is **Go 1.25.7+**. Nothing else.
 
 ```bash
 git clone https://github.com/<you>/gravity-go.git
 cd gravity-go
-go run .                    # same as start
+go run .                    # exactly like running start
 go build -o gravity-go.exe .
 ```
 
-Serves on **8964**, dashboard at http://localhost:8964/quota
+Runs on port **8964**, dashboard at `http://localhost:8964/quota`
 
 ```bash
-gravity-go start [-p PORT] [-v]  # default 8964
+gravity-go start [-p PORT] [-v]  # default port 8964
 gravity-go login                 # add a Google account via OAuth
-gravity-go accounts              # list accounts
-gravity-go logout-ide            # sign the IDE out, clear its session
-gravity-go version               # print version
+gravity-go accounts              # list your accounts
+gravity-go logout-ide            # sign the editor out and reset the session
+gravity-go version               # print the version number
 ```
 
-## Auth: two paths, in order
+## Login: two ways, in order
 
-1. **OAuth** — `gravity-go login` → Google consent → tokens in `~/.gravity-go/auth.json`. Multiple accounts rotate automatically.
-2. **Local IDE** — no OAuth session? Token is read from Antigravity's `state.vscdb` (read-only).
+1. **Via OAuth** — run `gravity-go login` ← approve on Google's page ← tokens get saved to `~/.gravity-go/auth.json`. You can add more than one account and it switches between them automatically.
+2. **Via the local IDE** — no OAuth session? It reads the token straight out of Antigravity's `state.vscdb` file (read-only, no modifications).
 
-Data lives in `~/.gravity-go`; a legacy `~/.anti-api` dir is used as-is when the new one doesn't exist yet. Override with `GRAVITY_DATA_DIR`.
+Data is stored in `~/.gravity-go`; if you have an old `~/.anti-api` folder it gets used as-is when the new folder doesn't exist. You can change the path manually with `GRAVITY_DATA_DIR`.
 
-## What you get
+## Which models are available?
 
-| Model | Notes |
+| Model | Details |
 | --- | --- |
-| `gemini-3.8-flash-high` | newest flash, default pick |
-| `gemini-3.7-flash-high` | previous flash |
-| `gemini-3.1-pro-high` | stronger, long thinking |
-| `claude-opus-4-6-thinking` | separate weekly quota |
+| `gemini-3.8-flash-high` | newest flash, the main and default pick |
+| `gemini-3.7-flash-high` | the previous flash |
+| `gemini-3.1-pro-high` | the strongest, for long deep-thinking sessions |
+| `claude-opus-4-6-thinking` | its own independent weekly quota |
 
-`GET /v1/models` is a whitelist — more ids are callable by name, mapped internally (`-high` → `-tiered` wire ids).
+`GET /v1/models` works on a whitelist basis — you can call other models by name and it translates them internally (`-high` to the real `-tiered` ids).
 
-- **Anthropic:** `POST /v1/messages` (+`/v1beta/messages`, `/messages`).
-- **OpenAI:** `POST /v1/chat/completions` — `reasoning_effort`, `stream_options.include_usage`.
-- **Search:** `GET|POST /search` — grounded answer + sources.
-- **Dashboard:** `/quota`, `/quota/json`, `/usage`, `/settings`, `/logs`, `/auth/*`, `/accounts/*` — no CDN, offline-friendly.
+* **Anthropic:** `POST /v1/messages` (plus `/v1beta/messages` and `/messages`).
+* **OpenAI:** `POST /v1/chat/completions` — with `reasoning_effort` and `stream_options.include_usage`.
+* **Search:** `GET|POST /search` — documented answers with their sources.
+* **Dashboard:** `/quota`, `/quota/json`, `/usage`, `/settings`, `/logs`, `/auth/*`, `/accounts/*` — lightweight, no CDN hostage-taking, works offline.
 
-Full reference: [API.md](API.md); every-route contract: [LOCALAPI.md](LOCALAPI.md).
+Full docs: [API.md](API.md); the detailed contract for every route: [LOCALAPI.md](LOCALAPI.md).
 
-## Rotation & pausing
+## Failover and pausing
 
-- Accounts serve **one at a time, in stored order** — deliberately not quota-aware (cached percentages lie per-request).
-- Pause via dashboard or `POST /accounts/{id}/enabled` — keeps creds, clears old cooldown on resume.
-- Pause **everything** → `503 All accounts are paused` instead of serving behind your back.
+* Accounts serve you **one after another in saved order** — deliberately not quota-percentage based (cached quota numbers play games and don't reflect reality per request).
+* You can pause an account from the dashboard or via `POST /accounts/{id}/enabled` — it keeps the login data and clears the cooldown as soon as you bring it back.
+* Paused **all accounts**? It gives you a straight `503 All accounts are paused` instead of working behind your back and spending without you knowing.
 
-## Config
+## Settings and environment variables
 
-| Variable | Default | Purpose |
+| Variable | Default | What does it do? |
 | --- | --- | --- |
-| `GRAVITY_DATA_DIR` | `~/.gravity-go` | data & settings |
-| `GRAVITY_HOST` / `GRAVITY_PORT` | `127.0.0.1` / `8964` | bind (`-p` wins) |
-| `GRAVITY_ACCOUNT_CONCURRENCY` | `1` | in flight per account (1–8) |
-| `GRAVITY_ACCOUNT_INTERVAL_MS` | `1000` | min spacing per account |
-| `GRAVITY_MIN_REQUEST_INTERVAL_MS` | `250` | global spacing |
-| `GRAVITY_SEARCH_TOKEN` | unset | require token on `/search` |
-| `GRAVITY_NO_OPEN` / `GRAVITY_OAUTH_NO_OPEN` | unset | `1` skips browser launch |
-| `GRAVITY_INSECURE_TLS` | unset | `1` disables TLS verify (corporate proxies only) |
-| `GRAVITY_JITTER` | enabled | `0` for deterministic runs |
+| `GRAVITY_DATA_DIR` | `~/.gravity-go` | data and settings path |
+| `GRAVITY_HOST` / `GRAVITY_PORT` | `127.0.0.1` / `8964` | host and port binding (passing `-p` overrides this) |
+| `GRAVITY_ACCOUNT_CONCURRENCY` | `1` | how many requests run at once per account (1 to 8) |
+| `GRAVITY_ACCOUNT_INTERVAL_MS` | `1000` | minimum gap between one account's requests (milliseconds) |
+| `GRAVITY_MIN_REQUEST_INTERVAL_MS` | `250` | global request spacing |
+| `GRAVITY_SEARCH_TOKEN` | unset | requires a protection token for `/search` |
+| `GRAVITY_NO_OPEN` / `GRAVITY_OAUTH_NO_OPEN` | unset | set `1` to stop it auto-opening the browser |
+| `GRAVITY_INSECURE_TLS` | unset | set `1` to disable TLS checking (corporate proxies only) |
+| `GRAVITY_JITTER` | enabled | set `0` to kill randomness and keep the path fixed |
 
-> ⚠️ `GRAVITY_HOST=0.0.0.0` binds *every interface* — an unauthenticated proxy holding Google credentials on your LAN. Check your env if you didn't mean to share quota with the café.
+> ⚠️ Heads up: setting `GRAVITY_HOST=0.0.0.0` makes it listen on *every interface* — an open proxy with no password carrying your Google credentials across the whole local network. Check your variables unless you fancy treating the café customers to your quota without knowing.
 
-## Honest caveats (measured)
+## To be straight with you (real experiments)
 
-- **Sampling params don't work:** `temperature`/`top_p`/`top_k` reach the wire (pinned by test) and upstream drops them. `temperature: 0` returned four different sentences.
-- **`stop_reason` lies on truncation:** compare `usage.output_tokens` vs `max_tokens`.
-- **Images must be base64:** URLs become a visible `[image omitted: …]` marker rather than a hallucinated description.
-- **Usage dollars are cosplay:** weekly quota, not per-token billing — all figures synthetic.
+* **Sampling params don't work:** options like `temperature`/`top_p`/`top_k` reach the upstream server and get completely ignored. We tried `temperature: 0` and got back four different sentences!
+* **`stop_reason` sometimes bluffs:** if the text feels cut off, manually compare `usage.output_tokens` against `max_tokens`.
+* **Images must be Base64:** send an image URL and it turns into a clear text note `[image omitted: …]` instead of the model hallucinating a description out of thin air.
+* **The dollar cost math is for show:** the accounting is a weekly quota, not per-token billing — all those dollar figures are just for vibes so you can picture the volume.
 
-## NOT included (on purpose)
+## Things we excluded on purpose
 
-Antigravity provider only. No routing, no tunnels (bring ngrok), no self-update, no embeddings — rejected surfaces answer explicit `501`.
+The program exists to pull Antigravity services and exploit them, nothing else. Don't expect advanced network routing, tunnels and hole-punching (bring your own ngrok), auto-update, or embeddings — any unsupported route slaps you with a straight `501`, no beating around the bush.
 
-## Checks
+## Checking the code
 
 ```bash
-go run ./cmd/check   # format + vet + build + tests + race
-go test ./...        # tests only
+go run ./cmd/check    # formatting + vet + build + tests + race detection
+go test ./...         # tests only
 ```
 
-Race detector needs a C compiler: `winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT.Base`
+The race detector needs a C compiler: install it with `winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT.Base`
 
 ## Docs
 
-- [README.md](README.md) — Arabic version.
-- [API.md](API.md) — 5-minute integration reference.
-- [LOCALAPI.md](LOCALAPI.md) — the full contract.
-- [DESIGN.md](DESIGN.md) — dashboard design tokens, CSS only.
+* [README.md](README.md) — the Arabic version.
+* [API.md](API.md) — quick 5-minute integration reference.
+* [LOCALAPI.md](LOCALAPI.md) — full docs for every route.
+* [DESIGN.md](DESIGN.md) — dashboard design system (CSS only).
 
 ---
 
-*Built for the moment your paid plan says "slow down" and your deadline says "lol no." If gravity-go saved a deploy, star it so the next person drowning in 429s finds the lifeboat faster.*
+*Made for the moment your paid plan tells you to "calm down and slow-play it" while the deadline answers with an evil laugh saying "yeah, right". If gravity-go bailed you out and saved a delivery on the edge, don't skimp on a Star so the next person drowning in 429 rate limits finds the lifeboat faster.*
