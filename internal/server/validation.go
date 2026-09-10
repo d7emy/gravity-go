@@ -9,11 +9,10 @@ import (
 //
 // maxMessagesPerRequest was 1000, carried over from the TypeScript build. That
 // is far too low for real agentic use: every tool call and its result is a
-// message, so a long session reaches four figures quickly, and a 669k-token
-// opencode session was rejected outright. The genuine limits are the model's
-// context window and the 64MB body cap, both enforced elsewhere; this is only a
-// backstop against a pathological payload, so it is set well clear of anything
-// a real conversation produces.
+// message, so a long session reaches four figures quickly and was rejected
+// outright. The genuine limits are the model's context window and the 64MB body
+// cap, both enforced elsewhere; this is only a backstop against a pathological
+// payload, so it is set well clear of anything a real conversation produces.
 const (
 	maxModelNameLength    = 256
 	maxMessagesPerRequest = 100000

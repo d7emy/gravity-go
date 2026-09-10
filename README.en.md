@@ -8,7 +8,7 @@ Antigravity's internal models, running for you as a local API fully compatible w
 
 ## The disaster that keeps happening
 
-You paid good money for an OpenCode subscription, then mid-way through a long coding session the reply gets **rejected straight to your face** (happened in a real session that burned 669k tokens!), or you suddenly slam into the **100-tool ceiling**, or all work halts out of nowhere with a **429** while you've only got a few files left to finish — and the meter keeps charging while you zone out at the `retry-after` screen.
+You paid good money for an OpenCode subscription, then mid-way through a long coding session the reply gets **rejected straight to your face**, or you suddenly slam into the **100-tool ceiling**, or all work halts out of nowhere with a **429** while you've only got a few files left to finish — and the meter keeps charging while you zone out at the `retry-after` screen.
 
 Instead of wrestling with Antigravity's miserable app and its tired experience, point OpenCode at `http://127.0.0.1:8964` and burn **Antigravity's weekly quota** off the shelf — Gemini + Claude working with you in the same agent loop. And when the first Google account runs dry, the request **quietly and automatically moves to the second account**. You get the full, correct reply without ever smelling an error.
 

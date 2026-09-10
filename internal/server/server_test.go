@@ -722,9 +722,9 @@ func TestAccountEnabledEndpoint(t *testing.T) {
 
 // Regression: the message-count ceiling was 1000, inherited from the TypeScript
 // build. Every tool call and its result is a message, so a real agentic session
-// passes that quickly — a 669k-token opencode session was rejected outright,
-// even though upstream accepts it (verified live at 3001 messages). The genuine
-// limits are the context window and the body cap, both enforced elsewhere.
+// passes that quickly and was rejected outright, even though upstream accepts it
+// (verified live at 3001 messages). The genuine limits are the context window
+// and the body cap, both enforced elsewhere.
 func TestLongConversationsAreNotRejectedOnMessageCount(t *testing.T) {
 	if maxMessagesPerRequest <= 1000 {
 		t.Fatalf("maxMessagesPerRequest = %d; a long agentic session exceeds this "+
