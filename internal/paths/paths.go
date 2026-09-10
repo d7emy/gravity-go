@@ -9,15 +9,28 @@ import (
 )
 
 // DataDir is where accounts, auth, settings and caches live.
-// Override with GRAVITY_DATA_DIR (falls back to ANTI_API_DATA_DIR so an existing
-// anti-api install can be pointed at directly).
+// Override with GRAVITY_DATA_DIR (ANTI_API_DATA_DIR still honoured so an
+// existing setup can be pointed at directly).
+//
+// Fresh installs use ~/.gravity-go. If that does not exist yet but a legacy
+// ~/.anti-api directory does, the legacy one is used as-is so existing
+// accounts keep working with no migration step. Once ~/.gravity-go exists it
+// always wins; to migrate, move the files over.
 func DataDir() string {
 	for _, key := range []string{"GRAVITY_DATA_DIR", "ANTI_API_DATA_DIR"} {
 		if v := strings.TrimSpace(os.Getenv(key)); v != "" {
 			return v
 		}
 	}
-	return filepath.Join(homeDir(), ".anti-api")
+	home := homeDir()
+	gravityDir := filepath.Join(home, ".gravity-go")
+	if _, err := os.Stat(gravityDir); err == nil {
+		return gravityDir
+	}
+	if _, err := os.Stat(filepath.Join(home, ".anti-api")); err == nil {
+		return filepath.Join(home, ".anti-api")
+	}
+	return gravityDir
 }
 
 // EnsureDataDir creates the data directory if it does not exist.

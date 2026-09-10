@@ -1353,7 +1353,7 @@ All `>=400` carry `X-Log-Reason` for server log correlation (`internal/server/se
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `GRAVITY_DATA_DIR` | `~/.anti-api` | Credentials (`auth.json`, `accounts.json`), `settings.json`, `usage.json`, `quota-cache.json`. `ANTI_API_DATA_DIR` fallback. |
+| `GRAVITY_DATA_DIR` | `~/.gravity-go` | Credentials (`auth.json`, `accounts.json`), `settings.json`, `usage.json`, `quota-cache.json`. `ANTI_API_DATA_DIR` fallback. A legacy `~/.anti-api` dir is used when `~/.gravity-go` does not exist yet. |
 | `GRAVITY_IDE_DB_PATH` | platform default | Override `state.vscdb` path. |
 | `GRAVITY_HOST` | `127.0.0.1` | Bind address. Fallback `ANTI_API_HOST`. |
 | `GRAVITY_PORT` | `8964` | Listen port; `-p` flag wins over env. |

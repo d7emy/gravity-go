@@ -21,7 +21,8 @@ import (
 )
 
 // authData is the on-disk shape of auth.json, matching the TypeScript build so
-// an existing ~/.anti-api/auth.json is picked up as-is.
+// an existing auth.json (under ~/.gravity-go, or a legacy ~/.anti-api picked
+// up by paths.DataDir) is read as-is.
 type authData struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`

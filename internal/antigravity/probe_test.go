@@ -18,7 +18,7 @@ import (
 // -high/-low/-medium/-tiered while the 3.7 family exposes only -tiered, which is
 // why every 3.7 flash variant must map onto gemini-3.7-flash-tiered.
 //
-//	PROBE=1 GRAVITY_DATA_DIR=$HOME/.anti-api go test ./internal/antigravity/ //	  -run TestProbeUpstreamModelCatalogue -v
+//	PROBE=1 GRAVITY_DATA_DIR=$HOME/.gravity-go go test ./internal/antigravity/ //	  -run TestProbeUpstreamModelCatalogue -v
 func TestProbeUpstreamModelCatalogue(t *testing.T) {
 	if os.Getenv("PROBE") == "" {
 		t.Skip("set PROBE=1")

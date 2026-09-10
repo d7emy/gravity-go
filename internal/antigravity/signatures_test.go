@@ -7,7 +7,7 @@ import (
 )
 
 // useTempDataDir points the data directory at a per-test temp dir, so the
-// signature store never touches the user's real ~/.anti-api.
+// signature store never touches the user's real data directory.
 func useTempDataDir(t *testing.T) {
 	t.Helper()
 	t.Setenv("GRAVITY_DATA_DIR", t.TempDir())

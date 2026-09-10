@@ -1,6 +1,6 @@
 // Package authstore persists provider accounts as one JSON file each, in the
-// same on-disk format the TypeScript build used, so an existing ~/.anti-api/auth
-// directory is read without migration.
+// same on-disk format the TypeScript build used, so an existing auth
+// directory (see paths.DataDir) is read without migration.
 package authstore
 
 import (

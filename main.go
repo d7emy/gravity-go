@@ -70,7 +70,7 @@ Usage:
   gravity-go version                Print the version
 
 Environment:
-  GRAVITY_DATA_DIR                  Override the data directory (~/.anti-api)
+  GRAVITY_DATA_DIR                  Override the data directory (~/.gravity-go)
   GRAVITY_IDE_DB_PATH               Override the Antigravity state.vscdb path
   GRAVITY_HOST                      Bind address (default 127.0.0.1)
   GRAVITY_ACCOUNT_CONCURRENCY       Requests in flight per account (default 1)

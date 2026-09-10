@@ -1,6 +1,6 @@
-# binq.cc — Frontend Design Specification
+# gravity-go dashboard — Frontend Design Specification
 
-> Complete design reference extracted from `binq/web/templates/index.html`, `binq/web/static/css/app.css`, and `binq/web/static/js/app.js`.
+> Design token and component reference for the dashboard, adapted from an external reference frontend (`templates/index.html`, `static/css/app.css`, `static/js/app.js`).
 
 ---
 
@@ -82,7 +82,7 @@ These selectors override hardcoded colors that can't use variables:
 
 ### Theme Persistence
 
-- Stored in cookie `binq_theme` (values: `"light"` or `"dark"`)
+- Stored in cookie `gravity_theme` (values: `"light"` or `"dark"`)
 - Applied before render via an inline `<script>` block in `<head>` that reads the cookie and sets `data-theme` on `<html>`
 - Toggle button `#themeToggle` switches theme and updates cookie
 
@@ -203,7 +203,7 @@ These selectors override hardcoded colors that can't use variables:
 
 - Sticky at `top: 4px`, z-index 1020
 - Background: `--color-surface`, subtle box-shadow
-- Left: brand logo (`bi-credit-card-2-front` + "binq.cc")
+- Left: brand logo (icon + "gravity-go")
 - Right: nav links (lookup, browse, starred, api) + theme toggle + auth area
 - Active link gets `.active` class: bold + primary color
 - Hover: primary color + subtle background
@@ -222,7 +222,7 @@ These selectors override hardcoded colors that can't use variables:
 ### 1. Lookup (`/`)
 
 **Hero section:**
-- `#title` — gradient animated text: "binq.cc"
+- `#title` — gradient animated text: "gravity-go"
 - `.subtitle` — "fast BIN lookup — check card issuer, brand, type & country"
 - `.subtitle-soft` — "6-digit or 8-digit BINs · bulk lookup supported"
 - Gold accent underline (50px bar under title)
@@ -496,18 +496,18 @@ Usage: `.brand-logo` (28×18px) and `.brand-logo-lg` (36×22px) classes.
 - **Export**: CSV and JSON download for any result set
 - **Copy to clipboard**: individual BIN copy button
 - **Toast notifications**: for copy, export, errors
-- **Auth**: Telegram login widget + session cookie (`binq_session`)
-- **Theme**: toggle between light/dark, persisted via cookie (`binq_theme`)
+- **Auth**: login widget + session cookie (`gravity_session`)
+- **Theme**: toggle between light/dark, persisted via cookie (`gravity_theme`)
 
 ---
 
 ## SEO / Meta
 
 ```html
-<title>binq.cc — BIN Lookup</title>
-<meta name="description" content="Fast, clean BIN (Bank Identification Number) lookup. Check card issuer, brand, type, and country.">
-<meta property="og:title" content="binq.cc — BIN Lookup">
-<meta property="og:description" content="Fast, clean BIN lookup tool. Check card issuer, brand, type, and country.">
+<title>gravity-go — Dashboard</title>
+<meta name="description" content="Local dashboard for the gravity-go proxy. Monitor quota, usage, logs and settings.">
+<meta property="og:title" content="gravity-go — Dashboard">
+<meta property="og:description" content="Local dashboard for the gravity-go proxy.">
 ```
 
 ---

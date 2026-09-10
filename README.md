@@ -98,10 +98,10 @@ gravity-go version                 # print version
 
 ## Auth: two paths, tried in order
 
-1. **OAuth** — `gravity-go login` runs Google consent against a loopback callback and saves the token pair to `~/.anti-api/auth.json`. Add several; they rotate automatically when one hits quota.
+1. **OAuth** — `gravity-go login` runs Google consent against a loopback callback and saves the token pair to `~/.gravity-go/auth.json`. Add several; they rotate automatically when one hits quota.
 2. **Local IDE** — no OAuth session? The token is read straight out of Antigravity's `state.vscdb` (SQLite, read-only). Works while the IDE is running.
 
-Credentials live in the same `~/.anti-api` layout the TypeScript build used (`auth.json`, `accounts.json`, `settings.json`, `usage.json`, `quota-cache.json`), so an existing install is picked up with no migration. Override with `GRAVITY_DATA_DIR`.
+Credentials live in `~/.gravity-go` (`auth.json`, `accounts.json`, `settings.json`, `usage.json`, `quota-cache.json`). If that folder doesn't exist yet but a legacy `~/.anti-api` one does, the legacy folder is used as-is — existing accounts keep working, no migration needed. To move over, just move the files into `~/.gravity-go`. Override either with `GRAVITY_DATA_DIR`.
 
 ## What you actually get
 
@@ -140,7 +140,7 @@ Full request/response reference: [API.md](API.md). Every-route contract: [LOCALA
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `GRAVITY_DATA_DIR` | `~/.anti-api` | creds, settings, caches |
+| `GRAVITY_DATA_DIR` | `~/.gravity-go` | creds, settings, caches |
 | `GRAVITY_IDE_DB_PATH` | platform default | Antigravity `state.vscdb` path |
 | `GRAVITY_HOST` | `127.0.0.1` | bind address |
 | `GRAVITY_PORT` | `8964` | listen port (`-p` wins) |
@@ -203,7 +203,7 @@ Tests cover the wire-exact stuff: schema cleaning, signature store/recovery, SSE
 
 - [API.md](API.md) — the 5-minute integration reference.
 - [LOCALAPI.md](LOCALAPI.md) — every route, every field, every status code. The contract.
-- [DESIGN.md](DESIGN.md) — dashboard design tokens (borrowed binq.cc system). Only read if you're touching CSS.
+- [DESIGN.md](DESIGN.md) — dashboard design tokens (adapted from an external reference design system). Only read if you're touching CSS.
 
 ---
 
