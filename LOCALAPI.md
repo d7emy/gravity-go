@@ -574,7 +574,7 @@ Proxied via `internal/antigravity/search.go:262` → `POST {baseURL}/v1internal:
 | Param | Required | Description |
 |-------|----------|-------------|
 | `q` or `query` | ✅ | Search query, 1..2000 chars, trimmed. `q` preferred; `query` alias. |
-| `model` | ❌ | Search model override; default `gemini-3.7-flash-tiered` or `GRAVITY_SEARCH_MODEL` / `ANTI_API_SEARCH_MODEL`. |
+| `model` | ❌ | Search model override; default `gemini-3.7-flash-tiered` or `GRAVITY_SEARCH_MODEL`. |
 | `format` | ❌ | `json` (default) or `text`. `text` returns `text/plain`. |
 | `token` | ❌ | Search token if `GRAVITY_SEARCH_TOKEN` is set (see Authorization). |
 
@@ -594,7 +594,7 @@ Missing `q`/`query` → `400 {"error":{"type":"invalid_request_error","message":
 
 ### Authorization
 
-If `GRAVITY_SEARCH_TOKEN` (or `ANTI_API_SEARCH_TOKEN`) is set, the request must provide it via **one** of (`internal/server/search.go:19`):
+If `GRAVITY_SEARCH_TOKEN` is set, the request must provide it via **one** of (`internal/server/search.go:19`):
 
 * `?token=…` query param
 * `Authorization: Bearer <token>` (case-insensitive `Bearer`) or bare `Authorization: <token>`
@@ -1014,7 +1014,7 @@ curl -s http://127.0.0.1:8964/quota/json | jq .
 }
 ```
 
-* Rates: model rates (`kind:model`) are real published prices; family rates (`kind:family`) are coarse fallbacks inherited from original `anti-api` (`internal/usage/usage.go:23`). Rates are `USD per million tokens`.
+* Rates: model rates (`kind:model`) are real published prices; family rates (`kind:family`) are coarse fallbacks inherited from the original TypeScript implementation (`internal/usage/usage.go:23`). Rates are `USD per million tokens`.
 * `cost` is rounded to 2 decimals; `costExact` is unrounded (sub-cent rows would otherwise be `$0.00`).
 * `models` sorted by descending `cost`; `daily` holds last 14 days.
 * `rateFor` matches `modelRate.Match` as substring of lowercased id, so one entry covers `gemini-3.7-flash-tiered` and `gemini-3.7-flash-high`.
@@ -1078,7 +1078,7 @@ Invalid JSON → `400 {"error":{"type":"invalid_request_error","message":"Invali
 
 `internal/server/misc.go:59` & `internal/logbuf/logbuf.go`.
 
-In-memory ring buffer, default `2000` lines (env `GRAVITY_LOG_LINES` / `ANTI_API_LOG_LINES` ≥100). Capture must be enabled via `settings.captureLogs` or log calls are no-op.
+In-memory ring buffer, default `2000` lines (env `GRAVITY_LOG_LINES` ≥100). Capture must be enabled via `settings.captureLogs` or log calls are no-op.
 
 **GET /logs?limit=500&since=123**
 
@@ -1214,13 +1214,13 @@ Both `POST /v1/messages` with `stream:true` and `POST /v1/chat/completions` with
 
 ### Global spacing
 
-`internal/server/ratelimit.go:21` — `globalLimiter` enforces `GRAVITY_MIN_REQUEST_INTERVAL_MS` / `ANTI_API_MIN_REQUEST_INTERVAL_MS` default **250 ms** between outbound calls. Request slots are reserved before unlock so concurrent callers stack.
+`internal/server/ratelimit.go:21` — `globalLimiter` enforces `GRAVITY_MIN_REQUEST_INTERVAL_MS` default **250 ms** between outbound calls. Request slots are reserved before unlock so concurrent callers stack.
 
 ### Per-account concurrency & spacing
 
 `internal/antigravity/accounts.go:101`:
 
-* `GRAVITY_ACCOUNT_CONCURRENCY` / `ANTI_API_ACCOUNT_CONCURRENCY` default `1`, clamped `1..8`. `1` fully serializes an account (protects against per-credential 429s). Higher allows parallel tool calls but raises 429 risk.
+* `GRAVITY_ACCOUNT_CONCURRENCY` default `1`, clamped `1..8`. `1` fully serializes an account (protects against per-credential 429s). Higher allows parallel tool calls but raises 429 risk.
 * `GRAVITY_ACCOUNT_INTERVAL_MS` default `1000 ms` minimum between two calls on same account. Reserved **including wait** (`now + sleepMs`) to avoid drift.
 * `GRAVITY_ACCOUNT_LOCK_WAIT_TIMEOUT_MS` default `45s`; on timeout, proceeds without gate (avoids wedging).
 
@@ -1353,27 +1353,26 @@ All `>=400` carry `X-Log-Reason` for server log correlation (`internal/server/se
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `GRAVITY_DATA_DIR` | `~/.gravity-go` | Credentials (`auth.json`, `accounts.json`), `settings.json`, `usage.json`, `quota-cache.json`. `ANTI_API_DATA_DIR` fallback. A legacy `~/.anti-api` dir is used when `~/.gravity-go` does not exist yet. |
+| `GRAVITY_DATA_DIR` | `~/.gravity-go` | Credentials (`auth.json`, `accounts.json`), `settings.json`, `usage.json`, `quota-cache.json`. A legacy data dir is used when `~/.gravity-go` does not exist yet. |
 | `GRAVITY_IDE_DB_PATH` | platform default | Override `state.vscdb` path. |
-| `GRAVITY_HOST` | `127.0.0.1` | Bind address. Fallback `ANTI_API_HOST`. |
+| `GRAVITY_HOST` | `127.0.0.1` | Bind address. |
 | `GRAVITY_PORT` | `8964` | Listen port; `-p` flag wins over env. |
-| `GRAVITY_ACCOUNT_CONCURRENCY` | `1` | In-flight per account (1..8). `ANTI_API_ACCOUNT_CONCURRENCY` fallback. |
+| `GRAVITY_ACCOUNT_CONCURRENCY` | `1` | In-flight per account (1..8). |
 | `GRAVITY_ACCOUNT_INTERVAL_MS` | `1000` | Min spacing per account. `-1` unset fallback path uses `1000` default. |
-| `GRAVITY_MIN_REQUEST_INTERVAL_MS` | `250` | Global spacing. `ANTI_API_MIN_REQUEST_INTERVAL_MS` fallback. `0` disables. |
+| `GRAVITY_MIN_REQUEST_INTERVAL_MS` | `250` | Global spacing. `0` disables. |
 | `GRAVITY_ACCOUNT_LOCK_WAIT_TIMEOUT_MS` | `45000` | Gate wait timeout before proceeding without lock. |
 | `GRAVITY_INSECURE_TLS` | unset | `1` disables TLS verification (for TLS-inspecting corporate proxies). Verifies by default. |
-| `GRAVITY_NO_OPEN` | unset | `1` suppresses dashboard auto-open at startup. `ANTI_API_NO_OPEN` fallback. |
+| `GRAVITY_NO_OPEN` | unset | `1` suppresses dashboard auto-open at startup. |
 | `GRAVITY_OAUTH_NO_OPEN` | unset | `1` suppresses browser for sign-in (show URL on dashboard instead). |
-| `GRAVITY_SEARCH_TOKEN` | unset | Require token on `/search`. `ANTI_API_SEARCH_TOKEN` fallback. |
-| `GRAVITY_SEARCH_MODEL` | `gemini-3.7-flash-tiered` | Default search model. `ANTI_API_SEARCH_MODEL` fallback. |
-| `GRAVITY_LOG_LINES` | `2000` | Log ring size (≥100 enabled). `ANTI_API_LOG_LINES` fallback. |
-| `GRAVITY_LOG_LINES` / `ANTI_API_LOG_LINES` | `2000` | Same as above (logbuf). |
+| `GRAVITY_SEARCH_TOKEN` | unset | Require token on `/search`. |
+| `GRAVITY_SEARCH_MODEL` | `gemini-3.7-flash-tiered` | Default search model. |
+| `GRAVITY_LOG_LINES` | `2000` | Log ring size (≥100 enabled). |
 | `GRAVITY_OAUTH_NO_OPEN` | unset | As above. |
 | `GRAVITY_IDE_VERSION` | `1.15.8` | Pin the presented IDE version. `ANTIGRAVITY_IDE_VERSION` fallback. |
 | `GRAVITY_USER_AGENT` | derived | Full upstream User-Agent override (debugging). `ANTIGRAVITY_USER_AGENT` fallback. |
 | `GRAVITY_JITTER` | enabled | `0` disables transport jitter (endpoint shuffle, retry/spacing/keep-alive spreads) for deterministic tests. |
 
-`GRAVITY_HOST` binding: `net.JoinHostPort(host, port)` (`main.go:149`). `ANTI_API_HOST=0.0.0.0` is honored for compat and will bind every interface — see README warning.
+`GRAVITY_HOST` binding: `net.JoinHostPort(host, port)` (`main.go:149`). Setting the host to `0.0.0.0` will bind every interface — see README warning.
 
 TLS verification is ON by default (`internal/antigravity/httpclient.go`); set `GRAVITY_INSECURE_TLS=1` only behind a trusted intercepting proxy.
 

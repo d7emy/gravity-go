@@ -78,7 +78,7 @@ func registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /logs/stream", handleLogStream)
 
 	// Web search (grounded googleSearch via Antigravity). Open by default; set
-	// GRAVITY_SEARCH_TOKEN or ANTI_API_SEARCH_TOKEN to require auth.
+	// GRAVITY_SEARCH_TOKEN (or its legacy equivalent) to require auth.
 	mux.HandleFunc("GET /search", handleSearch)
 	mux.HandleFunc("POST /search", handleSearch)
 

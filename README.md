@@ -2,7 +2,7 @@
 
 > Your OpenCode subscription just hit a rate limit mid-refactor. Antigravity didn't. This is the bridge.
 
-Antigravity's built-in models, exposed as a local Anthropic-compatible (and OpenAI-compatible) API. A Go port of the antigravity provider from `anti-api`, shipping as **one static binary** — no Node, no CDN, no files to deploy next to the exe.
+Antigravity's built-in models, exposed as a local Anthropic-compatible (and OpenAI-compatible) API. A Go service shipping as **one static binary** — no Node, no CDN, no files to deploy next to the exe.
 
 ```
         .-~~~-.
@@ -155,9 +155,9 @@ Full request/response reference: [API.md](API.md). Every-route contract: [LOCALA
 | `GRAVITY_USER_AGENT` | derived | full upstream UA override (debugging) |
 | `GRAVITY_JITTER` | enabled | `0` disables transport jitter for deterministic runs |
 
-`ANTI_API_*` equivalents are honoured, so old env keeps working.
+Previous-generation variable names are still accepted as silent fallbacks, so older setups keep working.
 
-> ⚠️ **Cheeky warning with teeth:** `GRAVITY_HOST` defaults to loopback, but an inherited `ANTI_API_HOST=0.0.0.0` binds *every interface* — an unauthenticated proxy holding Google credentials, reachable from your LAN. If you didn't mean to share your quota with the coffee shop, check your env. Changing it only affects new terminals; old ones keep the value until restarted.
+> ⚠️ **Cheeky warning with teeth:** `GRAVITY_HOST` defaults to loopback, but an inherited `GRAVITY_HOST=0.0.0.0` (or its legacy equivalent) binds *every interface* — an unauthenticated proxy holding Google credentials, reachable from your LAN. If you didn't mean to share your quota with the coffee shop, check your env. Changing it only affects new terminals; old ones keep the value until restarted.
 
 **TLS:** the old TypeScript build disabled cert verification on *every* Google call. This port verifies by default. Behind a TLS-inspecting corporate proxy? `GRAVITY_INSECURE_TLS=1` restores the old behaviour — knowing it exposes your Google tokens to whatever terminates the connection.
 

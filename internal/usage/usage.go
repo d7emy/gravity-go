@@ -17,7 +17,7 @@ type pricing struct{ Input, Output float64 }
 
 // Coarse per-family prices, per million tokens. These are a fallback for models
 // whose real price is not known: they are inherited unchanged from the original
-// anti-api project and match no published price sheet exactly. In particular
+// TypeScript implementation and match no published price sheet exactly. In particular
 // they cost a flash model and a pro model identically, which is badly wrong --
 // prefer an entry in modelRates over adding anything here.
 var priceTable = map[string]pricing{
@@ -264,8 +264,8 @@ type Report struct {
 // estimate produced from these rates -- never an amount anyone was charged.
 const rateNote = "Estimates only. Antigravity bills against a weekly quota, not per token, " +
 	"so no figure here was actually charged. Model rates are real published prices. Family " +
-	"rates are a fallback for everything else: they are inherited from the original anti-api " +
-	"project, match no current price sheet, and cost a flash model the same as a pro model."
+	"rates are a fallback for everything else: they are inherited from the original TypeScript " +
+	"implementation, match no current price sheet, and cost a flash model the same as a pro model."
 
 // Rates returns the whole price table: the specific model prices first, then the
 // family fallbacks, each group in a stable order.

@@ -9,7 +9,7 @@ import (
 )
 
 // DataDir is where accounts, auth, settings and caches live.
-// Override with GRAVITY_DATA_DIR (ANTI_API_DATA_DIR still honoured so an
+// Override with GRAVITY_DATA_DIR (a legacy variable is still honoured so an
 // existing setup can be pointed at directly).
 //
 // Fresh installs use ~/.gravity-go. If that does not exist yet but a legacy
@@ -85,7 +85,8 @@ func IDEUserDataDir() string {
 }
 
 // IDEDBPath is Antigravity's globalStorage SQLite database.
-// Override with GRAVITY_IDE_DB_PATH / ANTI_API_IDE_DB_PATH for portable installs.
+// Override with GRAVITY_IDE_DB_PATH for portable installs (a legacy variable
+// is still honoured).
 func IDEDBPath() string {
 	for _, key := range []string{"GRAVITY_IDE_DB_PATH", "ANTI_API_IDE_DB_PATH"} {
 		if v := strings.TrimSpace(os.Getenv(key)); v != "" {

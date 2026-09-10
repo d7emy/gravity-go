@@ -23,7 +23,7 @@ const (
 )
 
 func GetSearchModel() string {
-	// Support both prefixes like other env vars; original uses ANTI_API_SEARCH_MODEL
+	// Support both the current and the legacy prefix like other env vars.
 	if v := strings.TrimSpace(getEnv("GRAVITY_SEARCH_MODEL", "ANTI_API_SEARCH_MODEL")); v != "" {
 		return v
 	}
