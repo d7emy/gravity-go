@@ -84,9 +84,9 @@ Data is stored in `~/.gravity-go`; if you have an old `~/.anti-api` folder it ge
 
 | Model | Details |
 | --- | --- |
-| `gemini-3.8-flash-high` | newest flash, the main and default pick |
-| `gemini-3.7-flash-high` | the previous flash |
-| `gemini-3.1-pro-high` | the strongest, for long deep-thinking sessions |
+| `gemini-3.8-flash-high` | best for agentic work right now, the main and default pick |
+| `gemini-3.7-flash-high` | the previous flash — fallback only |
+| `gemini-3.1-pro-high` | outdated, only use it if you have your own reason |
 | `claude-opus-4-6-thinking` | its own independent weekly quota |
 
 `GET /v1/models` works on a whitelist basis — you can call other models by name and it translates them internally (`-high` to the real `-tiered` ids).
