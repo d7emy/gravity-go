@@ -2,6 +2,8 @@
 
 **[العربية](README.md)**
 
+> ✨ vibe coded proudly ✨
+
 > Let's be honest: the Antigravity app is rough, neglected, and nobody enjoys its interface.. but its quota and models are free, and free is too good to waste! So we pulled its API out from under the hood and wired it into OpenCode — finish your work in the editor you love without paying one extra cent.
 
 Antigravity's internal models, running for you as a local API fully compatible with Anthropic and OpenAI. A lightweight Go service in **one static binary** — no Node, no CDN headaches, no sidecar files nagging you.
