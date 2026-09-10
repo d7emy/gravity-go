@@ -1,28 +1,30 @@
 # gravity-go
 
-> Your OpenCode subscription just hit a rate limit mid-refactor. Antigravity didn't. This is the bridge.
+**[English](README.en.md)**
 
-Antigravity's built-in models, exposed as a local Anthropic-compatible (and OpenAI-compatible) API. A Go service shipping as **one static binary** — no Node, no CDN, no files to deploy next to the exe.
+> اشتراك OpenCode حقك ضرب حد الاستخدام بنص الريفاكتور. Antigravity ما ضرب. هذا هو الجسر.
 
-## The crisis this solves
+موديلات Antigravity كـ API محلي متوافق مع Anthropic وOpenAI. خدمة Go في **ملف تنفيذي واحد** — بدون Node وبدون CDN وبدون ملفات إضافية.
 
-You already pay for OpenCode. Then:
+## الأزمة اللي يحلها
 
-- a long agentic session gets **rejected outright** (one real 669k-token session did),
-- a tool-heavy setup with stacked MCP servers slams into a **100-tool ceiling**,
-- a Friday-afternoon refactor dies on a **429** with three files left to go,
-- and the meter keeps running while you stare at `retry-after`.
+تدفع لـ OpenCode، وبعدين:
 
-`gravity-go` is the escape hatch: point OpenCode at `http://127.0.0.1:8964` and burn **Antigravity's weekly quota** instead — Gemini + Claude, same agent loop, zero per-token anxiety. When one Google account taps out, traffic **transparently fails over to the next one** inside the same request. You see one good response, not an error.
+- جلسة طويلة **تترفض من الأساس** (صارت فعلًا لجلسة 669k توكن)،
+- إعداد مليان أدوات يصطدم بسقف **100 أداة**،
+- ريفاكتور يموت على **429** وباقي لك ثلاث ملفات،
+- والعداد يحسب وأنت تطالع `retry-after`.
 
-## Why OpenCode users care
+الحل: وجّه OpenCode إلى `http://127.0.0.1:8964` واستهلك **الحصة الأسبوعية لـ Antigravity** بدل الدفع بالتوكن — Gemini وClaude بنفس حلقة الوكيل. وإذا حساب Google خلصت حصته، الطلب **يتحول تلقائيًا للحساب التالي** داخل نفس الطلب. تشوف رد ناجح، مو خطأ.
 
-- **It speaks both protocols.** `POST /v1/messages` for Anthropic clients, `POST /v1/chat/completions` for OpenAI clients. Streaming, tool use, images, thinking blocks — all translated to what upstream actually accepts.
-- **It's built for stupid-long sessions.** 100,000 messages and 10,000 tools per request (up from 1,000 / 100 in the TypeScript build) because every tool call + result is a message and real agent runs hit four figures fast.
-- **It survives quota death.** One account serves everything until Google says `429 quota_exhausted`. Then: cooldown, demote to back of queue, retry on the next account — persisted across restarts. Verified on live traffic: an account drained to 0%, cooled down ~5.3 days to weekly reset, and traffic stayed moved.
-- **It's one file.** Dashboard embedded via `go:embed`. Works offline, behind firewalls, on a plane.
+## ليش يهم مستخدمي OpenCode
 
-Quickest wiring (matches [OpenCode provider docs](https://opencode.ai/docs/providers/) — `baseURL` override pattern):
+- **يتكلم البروتوكولين:** `POST /v1/messages` لعملاء Anthropic و`POST /v1/chat/completions` لعملاء OpenAI — بث، أدوات، صور، Thinking Blocks.
+- **مصمم للجلسات الطويلة:** 100,000 رسالة و10,000 أداة للطلب الواحد، لأن كل استدعاء أداة ونتيجته رسالة.
+- **ينجو من نفاد الحصة:** حساب واحد يخدم الكل لين تقول Google ‏`429 quota_exhausted` — بعدها تهدئة + تأخير الحساب لآخر الطابور + إعادة محاولة شفافة، والترتيب محفوظ حتى بعد إعادة التشغيل.
+- **ملف واحد:** اللوحة مضمنة في الملف (`go:embed`) وتشتغل بدون إنترنت.
+
+أسرع ربط (نفس نمط `baseURL` في [توثيق OpenCode](https://opencode.ai/docs/providers/)):
 
 ```json
 {
@@ -35,7 +37,7 @@ Quickest wiring (matches [OpenCode provider docs](https://opencode.ai/docs/provi
 }
 ```
 
-Or as a dedicated local provider (same shape as the Ollama/LM Studio examples in those docs):
+أو كمزود مستقل بنمط OpenAI (مثل أمثلة Ollama في نفس التوثيق):
 
 ```json
 {
@@ -46,153 +48,111 @@ Or as a dedicated local provider (same shape as the Ollama/LM Studio examples in
       "name": "gravity-go (local)",
       "options": { "baseURL": "http://127.0.0.1:8964/v1" },
       "models": {
-        "gemini-3.8-flash-high": { "name": "Gemini 3.8 Flash (High)" },
-        "gemini-3.7-flash-high": { "name": "Gemini 3.7 Flash (High)" },
-        "claude-opus-4-6-thinking": { "name": "Claude Opus 4.6 (Thinking)" }
+        "gemini-3.8-flash-high": { "name": "Gemini 3.8 Flash (High)" }
       }
     }
   }
 }
 ```
 
-Dummy key everywhere (`ANTHROPIC_API_KEY=dummy`). The proxy binds loopback and needs no key.
+المفتاح صوري (`ANTHROPIC_API_KEY=dummy`) — البروكسي على loopback وما يحتاج مفتاح.
 
-## Install & run
+## التشغيل
 
-Requires **Go 1.25.7+**. No other toolchain.
+يحتاج **Go 1.25.7+** فقط.
 
 ```bash
 git clone https://github.com/<you>/gravity-go.git
 cd gravity-go
-
-# shortest path — no build step, no arguments:
-go run .
-
-# or a standalone binary:
+go run .                    # تشغيل مباشر — نفسها start
 go build -o gravity-go.exe .
-./gravity-go.exe
 ```
 
-That starts the proxy on port **8964**. Running with no arguments is the same as `start`. Dashboard: http://localhost:8964/quota
+يشتغل على المنفذ **8964** واللوحة على http://localhost:8964/quota
 
 ```bash
-gravity-go                         # start proxy (same as start)
-gravity-go start [-p PORT] [-v]    # start proxy, default 8964
-gravity-go login                   # add a Google account via browser OAuth
-gravity-go accounts                # list configured accounts
-gravity-go logout-ide              # close Antigravity, clear its stored session
-gravity-go version                 # print version
+gravity-go start [-p PORT] [-v]  # تشغيل البروكسي (الافتراضي 8964)
+gravity-go login                 # إضافة حساب Google عبر OAuth
+gravity-go accounts              # عرض الحسابات
+gravity-go logout-ide            # تسجيل خروج IDE ومسح جلسته
+gravity-go version               # عرض النسخة
 ```
 
-## Auth: two paths, tried in order
+## الدخول: مساران بالترتيب
 
-1. **OAuth** — `gravity-go login` runs Google consent against a loopback callback and saves the token pair to `~/.gravity-go/auth.json`. Add several; they rotate automatically when one hits quota.
-2. **Local IDE** — no OAuth session? The token is read straight out of Antigravity's `state.vscdb` (SQLite, read-only). Works while the IDE is running.
+1. **OAuth** — `gravity-go login` يفتح موافقة Google ويحفظ التوكن في `~/.gravity-go/auth.json`. ضف عدة حسابات وهي تتناوب تلقائيًا.
+2. **IDE المحلي** — ما فيه OAuth؟ التوكن يُقرأ مباشرة من `state.vscdb` حق Antigravity (قراءة فقط).
 
-Credentials live in `~/.gravity-go` (`auth.json`, `accounts.json`, `settings.json`, `usage.json`, `quota-cache.json`). If that folder doesn't exist yet but a legacy `~/.anti-api` one does, the legacy folder is used as-is — existing accounts keep working, no migration needed. To move over, just move the files into `~/.gravity-go`. Override either with `GRAVITY_DATA_DIR`.
+البيانات في `~/.gravity-go` — ولو ما وُجد وكان فيه `~/.anti-api` قديم، يُستخدم كما هو بدون ترحيل. تجاوز الكل عبر `GRAVITY_DATA_DIR`.
 
-## What you actually get
+## وش تحصل
 
-**Models** (`GET /v1/models`, `/v1beta/models`, `/models`):
-
-| id | notes |
+| الموديل | ملاحظة |
 | --- | --- |
-| `gemini-3.8-flash-high` | newest flash, default pick |
-| `gemini-3.7-flash-high` | previous flash, still there |
-| `gemini-3.1-pro-high` | stronger, long thinking blocks |
-| `claude-opus-4-6-thinking` | separate weekly quota from Gemini |
+| `gemini-3.8-flash-high` | الأحدث، الاختيار الافتراضي |
+| `gemini-3.7-flash-high` | السابق، ما زال موجود |
+| `gemini-3.1-pro-high` | أقوى، Thinking Blocks طويلة |
+| `claude-opus-4-6-thinking` | حصة أسبوعية منفصلة عن Gemini |
 
-Client ids map to upstream wire ids internally (`gemini-3.8-flash-high` → `gemini-3.8-flash-tiered`). More ids are callable than listed — the listing is a whitelist, not the limit. `fetchAvailableModels` lags rollouts (3.8 serves fine while missing from the catalogue), so probe the id directly.
+القائمة المعروضة في `GET /v1/models` تصفية فقط — موديلات أكثر قابلة للاستدعاء بالاسم. الأسماء تُترجم داخليًا (`gemini-3.8-flash-high` ← `gemini-3.8-flash-tiered`).
 
-**Anthropic:** `POST /v1/messages` (also `/v1beta/messages`, `/messages`) — streaming + non-streaming, tool use, base64 images, thinking blocks.
+- **Anthropic:** `POST /v1/messages` (و`/v1beta/messages` و`/messages`).
+- **OpenAI:** `POST /v1/chat/completions` — مع `reasoning_effort` و`stream_options.include_usage`.
+- **بحث:** `GET|POST /search` — بحث ويب مدعوم، يرجع إجابة + مصادر.
+- **لوحة:** `/quota` و`/quota/json` و`/usage` و`/settings` و`/logs` و`/auth/*` و`/accounts/*` — بدون CDN وتشتغل أوفلاين.
 
-**OpenAI:** `POST /v1/chat/completions` (also `/chat/completions`) — streaming + non-streaming, tool calls, `reasoning_effort` (`low`/`medium`/`high`, or `reasoning.effort`), `stream_options.include_usage`.
+المرجع الكامل: [API.md](API.md) للمختصر، و[LOCALAPI.md](LOCALAPI.md) لكل مسار وحقل.
 
-**Search:** `GET|POST /search` — grounded web search, returns answer + sources + citations + what was actually searched.
+## التدوير والإيقاف
 
-**Dashboard:** `/quota`, `/quota/json`, `/usage`, `/settings`, `/logs`, `/auth/*`, `/accounts/*` — including `POST /accounts/{id}/enabled` to pause/resume without deleting credentials. Fully self-contained: vendored CSS/JS/fonts, no CDN, works offline. Design tokens live in `DESIGN.md`.
+- الحسابات **واحدًا واحدًا بترتيب التخزين** — الأول في `accounts.json` يُستنزف أولًا. الترتيب مقصود أنه غير واعٍ بالحصة لأن أرقام الحصة المخزنة غير دقيقة لكل طلب.
+- زر الإيقاف في اللوحة (أو `POST /accounts/{id}/enabled`) يجمّد الحساب بدون حذف بياناته، والرجوع عنه يمسح التهدئة القديمة.
+- أوقف **الكل** والبروكسي يرد `503 All accounts are paused` بدل ما يخدم من وراك.
 
-Full request/response reference: [API.md](API.md). Every-route contract: [LOCALAPI.md](LOCALAPI.md).
+## الإعدادات
 
-## Rotation, pausing, and the 503 you asked for
-
-- Accounts run **one at a time, in stored order**. First in `accounts.json` drains first. Reorder the file to pick your sacrifice. Deliberately *not* quota-aware — cached quota percentages lie at per-request granularity.
-- On `quota_exhausted` 429: cooldown + demote + transparent retry. Caller sees success.
-- Dashboard switch (or `curl -X POST .../accounts/you@gmail.com/enabled -d '{"enabled":false}'`) pauses an account. Pause keeps creds, project id, quota history — resume needs no re-login and clears leftover cooldown.
-- Paused means paused: excluded from rotation, explicit pinning, *and* the emergency path. There's a guard so the process-level fallback token (which belongs to one of the same Google accounts) can't leak traffic past the switch.
-- Pause **everything** and the proxy answers `503 All accounts are paused` instead of serving behind your back.
-
-`GRAVITY_ACCOUNT_CONCURRENCY` defaults to `1` — one account fully serialized, because Google rate-limits per credential. Raise it for parallel tool calls if you like living dangerously (throughput up, 429 risk up).
-
-## Config
-
-| Variable | Default | Purpose |
+| المتغير | الافتراضي | الغرض |
 | --- | --- | --- |
-| `GRAVITY_DATA_DIR` | `~/.gravity-go` | creds, settings, caches |
-| `GRAVITY_IDE_DB_PATH` | platform default | Antigravity `state.vscdb` path |
-| `GRAVITY_HOST` | `127.0.0.1` | bind address |
-| `GRAVITY_PORT` | `8964` | listen port (`-p` wins) |
-| `GRAVITY_ACCOUNT_CONCURRENCY` | `1` | in flight per account (1–8) |
-| `GRAVITY_ACCOUNT_INTERVAL_MS` | `1000` | min spacing per account |
-| `GRAVITY_MIN_REQUEST_INTERVAL_MS` | `250` | global spacing |
-| `GRAVITY_INSECURE_TLS` | unset | `1` disables TLS verify — read below |
-| `GRAVITY_NO_OPEN` | unset | `1` skips dashboard auto-open |
-| `GRAVITY_OAUTH_NO_OPEN` | unset | `1` skips browser for sign-in |
-| `GRAVITY_SEARCH_TOKEN` | unset | require token on `/search` |
-| `GRAVITY_IDE_VERSION` | `1.15.8` | pin the presented IDE version |
-| `GRAVITY_USER_AGENT` | derived | full upstream UA override (debugging) |
-| `GRAVITY_JITTER` | enabled | `0` disables transport jitter for deterministic runs |
+| `GRAVITY_DATA_DIR` | `~/.gravity-go` | البيانات والإعدادات |
+| `GRAVITY_HOST` / `GRAVITY_PORT` | `127.0.0.1` / `8964` | العنوان والمنفذ (`-p` يغلب) |
+| `GRAVITY_ACCOUNT_CONCURRENCY` | `1` | طلبات متوازية لكل حساب (1–8) |
+| `GRAVITY_ACCOUNT_INTERVAL_MS` | `1000` | أقل فاصل بين طلبين لنفس الحساب |
+| `GRAVITY_MIN_REQUEST_INTERVAL_MS` | `250` | الفاصل العام |
+| `GRAVITY_SEARCH_TOKEN` | فارغ | توكن إجباري على `/search` |
+| `GRAVITY_NO_OPEN` / `GRAVITY_OAUTH_NO_OPEN` | فارغ | `1` يمنع فتح المتصفح |
+| `GRAVITY_INSECURE_TLS` | فارغ | `1` يعطل التحقق من الشهادات (للبروكسيات الشركية فقط) |
+| `GRAVITY_JITTER` | مفعّل | `0` يعطل العشوائية للاختبارات الحتمية |
 
-Previous-generation variable names are still accepted as silent fallbacks, so older setups keep working.
+> ⚠️ تحذير لطيف بأسنان: `GRAVITY_HOST=0.0.0.0` يفتح البروكسي — اللي ما يحتاج مصادقة وشايل توكنات Google — على كل الشبكة المحلية. إذا ما كنت ناوي تعزم القهوة على حصتك، راجع متغيرات البيئة.
 
-> ⚠️ **Cheeky warning with teeth:** `GRAVITY_HOST` defaults to loopback, but an inherited `GRAVITY_HOST=0.0.0.0` (or its legacy equivalent) binds *every interface* — an unauthenticated proxy holding Google credentials, reachable from your LAN. If you didn't mean to share your quota with the coffee shop, check your env. Changing it only affects new terminals; old ones keep the value until restarted.
+## تنبيهات صادقة (مقاسة، مو تخمين)
 
-**TLS:** the old TypeScript build disabled cert verification on *every* Google call. This port verifies by default. Behind a TLS-inspecting corporate proxy? `GRAVITY_INSECURE_TLS=1` restores the old behaviour — knowing it exposes your Google tokens to whatever terminates the connection.
+- **معاملات العشوائية ما تشتغل:** `temperature` و`top_p` و`top_k` توصل للسلك (مثبت باختبار) **والاتجاه upstream يتجاهلها**. `temperature: 0` رجعت أربع صياغات مختلفة لأربع طلبات. لا تعتمد عليها للتكرارية.
+- **`stop_reason` يكذب عند القطع:** يرجع `end_turn` حتى مع تجاوز `max_tokens`. قارن `usage.output_tokens` بالـ `max_tokens` المطلوب.
+- **الصور لازم base64:** الروابط تُستبدل بعلامة `[image omitted: …]` واضحة بدل ما يهلوس الموديل عن صورة ما شافها.
+- **أسعار لوحة الاستهلاك تمثيل:** الفوترة حصة أسبوعية مو بالتوكن، فكل أرقام الدولار تقديرات.
 
-## Honest caveats (measured, not guessed)
+## وش مو موجود (عمدًا)
 
-- **Sampling params don't work.** `temperature`/`top_p`/`top_k` are validated, forwarded under Gemini's field names, pinned by `TestSamplingParametersReachTheWire` — **and upstream drops them**. `temperature: 0` returned four different sentences in four calls; `temp 0 + top_k 1 + top_p 0` still varied on both endpoints, while `maxOutputTokens` in the same block *was* honoured. Don't rely on `temperature: 0` for determinism. No client change needed if upstream ever honours them.
-- **`stop_reason` lies when truncated.** Reported `end_turn` even past `max_tokens`. Compare `usage.output_tokens` vs requested `max_tokens` instead.
-- **Images must be base64.** URLs can't be inlined upstream. Non-base64 becomes a visible `[image omitted: …]` marker + a log line naming the exact shape (`GET /logs?json=1` to see it). The marker never echoes the original — an earlier version pasted megabytes of base64 back as prose, and the model confidently described a photo it never saw. A missing picture beats a hallucinated one.
-- **Cost panel is cosplay.** Antigravity bills weekly quota, not tokens. Dollar figures are synthetic estimates; family fallbacks (`claude $5/$25`, `gemini $2/$12`, `gpt $1.75/$14` per M) are inherited guesses — flash's real promo rate is `$0.75/$3.75`. Check the rate table in the panel / `GET /usage`. When the promo ends, update `modelRates` in `internal/usage/usage.go` (a test pins it so the change is deliberate).
+مزود antigravity فقط — لا codex ولا copilot ولا routing ولا أنفاق (هات ngrok بنفسك) ولا تحديث ذاتي (`GET /updates/check` يقولها بأدب) ولا embeddings — المرفوض منها يرجع `501` صريح.
 
-## What's NOT here (on purpose)
-
-- Only the **antigravity provider**. No codex, copilot, zed, kiro, grok.
-- No routing engine, no tunnel management — gone, not greyed out. Bring your own ngrok/cloudflared.
-- No self-update. Rebuild: `go build -o gravity-go.exe .` (`GET /updates/check` says so, politely).
-- No embeddings, Responses API, or image generation — explicitly `501`, not silently ignored.
-
-## Performance notes (with receipts)
-
-Benchmarks in `internal/antigravity/bench_*_test.go`:
-
-- **SSE reading:** rescanned the whole buffer per 8KB read — O(n²) per event. 64KB event: 215 MB/s → **492 MB/s**. 1MB event: 23 MB/s → **474 MB/s**. Now scans only new bytes (+3 overlap for split separators).
-- **Thought-signature store:** held the lock across JSON encode + ~1MB disk write while lookups queue on it. Snapshots under lock, writes outside: **3.4ms → 47.7µs** lock time.
-- **Schema normalisation:** ~441µs for a 20-tool turn. Left alone — immaterial next to a multi-second upstream call.
-
-## Checks
+## الفحص
 
 ```bash
-go run ./cmd/check        # format + vet + build + tests + race detector
-go run ./cmd/check -short # skip slower cases
-go test ./...             # just the tests
+go run ./cmd/check         # تنسيق + vet + بناء + اختبارات + كاشف التسابق
+go test ./...              # الاختبارات فقط
 ```
 
-Race detector needs a C compiler (cgo). Missing one isn't a code defect — the checker says so and tells you what to install:
+كاشف التسابق يحتاج مترجم C (cgo) — غيابه مشكلة جهازك مو مشكلة الكود:
+`winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT.Base`
 
-```bash
-winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT.Base   # Windows
-```
+## الخرائط
 
-Tests cover the wire-exact stuff: schema cleaning, signature store/recovery, SSE block-index state machine, retry classification, rotation + refresh coalescing under concurrency, SQLite reader, search, HTTP surface.
-
-## Docs map
-
-- [API.md](API.md) — the 5-minute integration reference.
-- [LOCALAPI.md](LOCALAPI.md) — every route, every field, every status code. The contract.
-- [DESIGN.md](DESIGN.md) — dashboard design tokens (adapted from an external reference design system). Only read if you're touching CSS.
+- [README.en.md](README.en.md) — النسخة الإنجليزية.
+- [API.md](API.md) — مرجع التكامل السريع.
+- [LOCALAPI.md](LOCALAPI.md) — العقد الكامل لكل مسار.
+- [DESIGN.md](DESIGN.md) — توكنات تصميم اللوحة، لل CSS فقط.
 
 ---
 
-*Built for the moment your paid plan says "slow down" and your deadline says "lol no." If gravity-go saved a deploy, star it so the next person drowning in 429s finds the lifeboat faster.*
+*مصمم للحظة اللي تقول فيها خطتك المدفوعة "هدّي السرعة" وموعد التسليم يقول "ههه لا". إذا أنقذت gravity-go نشرة لك، حط نجمة عشان اللي بعده غرقان في 429 يلقى قارب النجاة أسرع.*
