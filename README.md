@@ -4,18 +4,6 @@
 
 Antigravity's built-in models, exposed as a local Anthropic-compatible (and OpenAI-compatible) API. A Go service shipping as **one static binary** — no Node, no CDN, no files to deploy next to the exe.
 
-```
-        .-~~~-.
-      .'  GRAVITY  '.
-     /   pulls you   \
-    |      in.        |
-     \   127.0.0.1  /
-      '.  :8964   .'
-        '-~~~-'
-     (no events were harmed.
-      your 429s were.)
-```
-
 ## The crisis this solves
 
 You already pay for OpenCode. Then:
