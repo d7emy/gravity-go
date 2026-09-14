@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gravity-go</title>
+<meta name="description" content="Antigravity models as a local Anthropic- and OpenAI-compatible API.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%9B%B0%3C/text%3E%3C/svg%3E">
+<script>
+  // Apply the stored theme before first paint so there is no flash of the wrong one.
+  (function () {
+    try {
+      var m = document.cookie.match(/(?:^|;\s*)gravity_theme=(light|dark)/);
+      var theme = m ? m[1]
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+  })();
+</script>
+<link rel="stylesheet" href="/vendor/app.css">
+</head>
+<body>
+
+<div class="top-bar"></div>
+
+<nav class="navbar-main">
+  <div class="navbar-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"></circle>
+      <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-30 12 12)"></ellipse>
+    </svg>
+    <span>gravity-go</span>
+  </div>
+
+  <div class="nav-links">
+    <button class="nav-link-custom active" data-page="quota">quota</button>
+    <button class="nav-link-custom" data-page="usage">usage</button>
+    <button class="nav-link-custom" data-page="logs">logs</button>
+    <button class="nav-link-custom" data-page="settings">settings</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle colour theme" title="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </button>
+  </div>
+</nav>
+
+<main class="app">
+
+  <!-- ============ QUOTA ============ -->
+  <section class="page active" id="pageQuota">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">quota.</h1>
+        <div class="title-underline"></div>
+        <p class="subtitle">weekly limits across your Antigravity accounts</p>
+        <p class="subtitle-soft" id="quotaSubtitle">&nbsp;</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn_small" id="btnDiagnostics">diagnostics</button>
+        <button class="btn_small" id="btnIdeLogout">log IDE out</button>
+        <button class="btn_one" id="btnAddAccount">add account</button>
+        <button class="btn_two" id="btnRefreshQuota">refresh</button>
+      </div>
+    </div>
+    <p class="muted-note" id="quotaUpdated" style="margin:-10px 0 14px">loading&hellip;</p>
+    <div class="card-grid" id="accountGrid"></div>
+    <div class="empty-state" id="quotaEmpty" hidden>no accounts yet &mdash; use &ldquo;add account&rdquo; to sign in with Google</div>
+  </section>
+
+  <!-- ============ USAGE ============ -->
+  <section class="page" id="pageUsage">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">usage.</h1>
+        <div class="title-underline"></div>
+        <p class="subtitle">token consumption and estimated cost</p>
+        <p class="subtitle-soft">estimated from published rates - antigravity bills by quota, not by token</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn_small danger" id="btnResetUsage">reset</button>
+        <button class="btn_two" id="btnRefreshUsage">refresh</button>
+      </div>
+    </div>
+
+    <div class="card-grid" id="usageTop">
+      <div class="card">
+        <h2 class="section-title">daily cost</h2>
+        <div style="height:220px"><canvas id="dailyChart"></canvas></div>
+        <div class="empty-state" id="dailyEmpty" hidden>no usage recorded yet</div>
+      </div>
+      <div class="card">
+        <div class="stat">
+          <div class="stat-label">today</div>
+          <div class="stat-value" id="costToday">$0.00</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <div class="stat-label">last 7 days</div>
+          <div class="stat-value" id="costWeek">$0.00</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <div class="stat-label">total</div>
+          <div class="stat-value" id="costTotal">$0.00</div>
+          <div class="stat-sub" id="tokenTotal">0 tokens</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2 class="section-title">by model</h2>
+      <div id="modelBreakdown"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2 class="section-title">rates</h2>
+      <div id="rateCards"></div>
+      <div class="rate-note" id="rateNote"></div>
+    </div>
+  </section>
+
+  <!-- ============ LOGS ============ -->
+  <section class="page" id="pageLogs">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">logs.</h1>
+        <div class="title-underline"></div>
+        <p class="subtitle">live server output</p>
+        <p class="subtitle-soft">recent lines only &mdash; enable capture in settings</p>
+      </div>
+      <div class="btn-row">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:400;color:var(--color-text-muted)">
+          <input type="checkbox" id="logFollow" checked> follow
+        </label>
+        <button class="btn_small" id="btnLogClear">clear</button>
+        <button class="btn_small" id="btnLogPause">pause</button>
+        <button class="btn_two" id="btnLogReload">reload</button>
+      </div>
+    </div>
+    <p class="status-note dim" id="logStatus" style="margin:-10px 0 12px">not connected</p>
+    <div class="log-view" id="logView"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="page" id="pageSettings">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">settings.</h1>
+        <div class="title-underline"></div>
+        <p class="subtitle">configure dashboard behaviour</p>
+        <p class="subtitle-soft">saved to settings.json in the data directory</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn_small" id="btnDisableAll">disable all</button>
+        <button class="btn_small" id="btnEnableAll">enable all</button>
+        <button class="btn_two" id="btnSaveSettings">save</button>
+      </div>
+    </div>
+
+    <div class="card-grid" id="settingsGrid">
+      <div class="setting">
+        <div class="setting-text">
+          <div class="setting-name">language</div>
+          <div class="setting-desc">dashboard display language</div>
+        </div>
+        <select class="filter-select" id="setLanguage">
+          <option value="en">English</option>
+          <option value="zh-CN">&#x4E2D;&#x6587;</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2 class="section-title">updates</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div class="setting-desc" style="margin:0">check whether a newer build is available</div>
+        <div class="btn-row">
+          <button class="btn_small" id="btnCheckUpdate">check</button>
+          <button class="btn_small" id="btnApplyUpdate" disabled>update</button>
+        </div>
+      </div>
+      <p class="status-note dim" id="updateStatus">not checked yet</p>
+    </div>
+  </section>
+
+</main>
+
+<div id="footer">gravity-go &middot; Antigravity models as a local Anthropic-compatible API</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">&nbsp;</h3>
+    <div id="modalBody"></div>
+    <div class="btn-row" style="margin-top:16px;justify-content:flex-end">
+      <button class="btn_small" id="modalCancel">close</button>
+      <button class="btn_one" id="modalConfirm" hidden>confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/chart.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var state = {
+    page: "quota",
+    settings: {},
+    usage: null,
+    quotaFetchedAt: 0,
+    logPaused: false,
+    logSource: null,
+    chart: null,
+    refreshTimer: null
+  };
+
+  /* ---------------- helpers ---------------- */
+  function $(id) { return document.getElementById(id); }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function money(v) { return "$" + (Number(v) || 0).toFixed(2); }
+  function num(v) { return (Number(v) || 0).toLocaleString(); }
+
+  // A price per million tokens. These are always clean figures like 12.0, so
+  // two decimals is enough and keeps the columns aligned.
+  function rate(v) { return "$" + (Number(v) || 0).toFixed(2) + "/M"; }
+
+  // Cost for a single model. Most rows here are worth a fraction of a cent, and
+  // toFixed(2) renders every one of them as "$0.00" -- which reads as free
+  // rather than small. Fall back to more decimals only when rounding would
+  // otherwise wipe a non-zero amount out entirely.
+  function fineMoney(exact, rounded) {
+    var e = Number(exact);
+    if (!isFinite(e) || e === 0) return money(rounded);
+    if (e >= 0.01) return "$" + e.toFixed(2);
+    if (e >= 0.0001) return "$" + e.toFixed(4);
+    return "<$0.0001";
+  }
+
+  var toastTimer = null;
+  function toast(msg, isErr) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.className = "toast show" + (isErr ? " err" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.className = "toast"; }, 2400);
+  }
+
+  function relTime(ms) {
+    var s = Math.round((Date.now() - ms) / 1000);
+    if (s < 5) return "just now";
+    if (s < 60) return s + "s ago";
+    if (s < 3600) return Math.floor(s / 60) + "m ago";
+    return Math.floor(s / 3600) + "h ago";
+  }
+
+  // Turn an RFC3339 reset timestamp into "resets in 5d 13h".
+  function untilText(iso) {
+    if (!iso) return "";
+    var t = Date.parse(iso);
+    if (!isFinite(t)) return "";
+    var s = Math.round((t - Date.now()) / 1000);
+    if (s <= 0) return "resets now";
+    var d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    if (d > 0) return "resets in " + d + "d " + h + "h";
+    if (h > 0) return "resets in " + h + "h " + m + "m";
+    return "resets in " + m + "m";
+  }
+
+  function maskEmail(e) {
+    if (!state.settings.privacyMode || !e) return e;
+    var at = e.indexOf("@");
+    if (at < 1) return "•••";
+    return e[0] + "•••" + e.slice(at);
+  }
+
+  async function api(path, opts) {
+    var res = await fetch(path, opts);
+    var body = null;
+    try { body = await res.json(); } catch (e) { /* empty or non-JSON body */ }
+    if (!res.ok) {
+      var msg = (body && body.error && (body.error.message || body.error)) ||
+                (body && body.message) || ("HTTP " + res.status);
+      throw new Error(typeof msg === "string" ? msg : "HTTP " + res.status);
+    }
+    return body;
+  }
+
+  /* ---------------- theme ---------------- */
+  var SUN = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>';
+  var MOON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+
+  function paintThemeIcon() {
+    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    $("themeIcon").innerHTML = dark ? SUN : MOON;
+  }
+
+  $("themeToggle").addEventListener("click", function () {
+    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    var next = dark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    document.cookie = "gravity_theme=" + next + ";path=/;max-age=31536000;samesite=lax";
+    paintThemeIcon();
+    // The chart bakes in theme colours, so it has to be rebuilt.
+    if (state.usage) renderUsage(state.usage);
+  });
+  paintThemeIcon();
+
+  /* ---------------- navigation ---------------- */
+  function show(page) {
+    state.page = page;
+    var wanted = "page" + page.charAt(0).toUpperCase() + page.slice(1);
+    Array.prototype.forEach.call(document.querySelectorAll(".page"), function (p) {
+      p.classList.toggle("active", p.id === wanted);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".nav-link-custom"), function (b) {
+      b.classList.toggle("active", b.dataset.page === page);
+    });
+    if (page === "logs") startLogs();
+    if (page === "usage") loadUsage();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".nav-link-custom"), function (b) {
+    b.addEventListener("click", function () { show(b.dataset.page); });
+  });
+
+  /* ---------------- modal ---------------- */
+  var modalOnConfirm = null;
+
+  function openModal(title, body, onConfirm, confirmLabel) {
+    $("modalTitle").textContent = title;
+    var host = $("modalBody");
+    host.innerHTML = "";
+    host.appendChild(typeof body === "string" ? el("p", "setting-desc", body) : body);
+    var confirm = $("modalConfirm");
+    modalOnConfirm = onConfirm || null;
+    confirm.hidden = !onConfirm;
+    if (onConfirm) confirm.textContent = confirmLabel || "confirm";
+    $("modalBackdrop").classList.add("show");
+  }
+
+  function closeModal() {
+    $("modalBackdrop").classList.remove("show");
+    modalOnConfirm = null;
+  }
+
+  $("modalCancel").addEventListener("click", closeModal);
+  $("modalBackdrop").addEventListener("click", function (e) {
+    if (e.target === $("modalBackdrop")) closeModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeModal();
+  });
+  $("modalConfirm").addEventListener("click", function () {
+    var fn = modalOnConfirm;
+    closeModal();
+    if (fn) fn();
+  });
+
+  /* ---------------- quota ---------------- */
+  function barClass(pct) {
+    return pct <= 15 ? "quota-fill low" : pct <= 40 ? "quota-fill warn" : "quota-fill";
+  }
+
+  function accountCard(acct) {
+    var card = el("div", "card account-card fade-in");
+    if (state.settings.compactLayout) card.style.padding = "12px";
+
+    var remove = el("button", "account-remove", "×");
+    remove.title = "remove account";
+    remove.setAttribute("aria-label", "Remove account");
+    remove.addEventListener("click", function (e) {
+      e.stopPropagation();
+      openModal("Remove account?",
+        "This deletes the stored credentials for " + maskEmail(acct.displayName) +
+        ". You can add it again with “add account”.",
+        function () { deleteAccount(acct.accountId); }, "remove");
+    });
+    card.appendChild(remove);
+
+    var enabled = acct.enabled !== false;
+    if (!enabled) card.classList.add("account-off");
+
+    var head = el("div", "account-head");
+    head.appendChild(el("div", "account-email", maskEmail(acct.displayName)));
+
+    // Pause switch. Disabling takes the account out of rotation but keeps its
+    // credentials, so it is reversible without signing in again.
+    var sw = el("label", "switch account-switch");
+    var input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = enabled;
+    input.setAttribute("aria-label",
+      (enabled ? "Disable " : "Enable ") + maskEmail(acct.displayName));
+    input.addEventListener("click", function (e) { e.stopPropagation(); });
+    input.addEventListener("change", function () {
+      setAccountEnabled(acct.accountId, input.checked, input);
+    });
+    sw.appendChild(input);
+    sw.appendChild(el("span"));
+    sw.addEventListener("click", function (e) { e.stopPropagation(); });
+    head.appendChild(sw);
+
+    card.appendChild(head);
+
+    if (!enabled) {
+      card.appendChild(el("div", "account-off-note", "paused - not receiving requests"));
+    }
+
+    (acct.bars || []).forEach(function (bar) {
+      var row = el("div", "quota-row");
+
+      var label = el("div", "quota-label");
+      label.appendChild(el("span", null, bar.label));
+      label.appendChild(el("span", "quota-pct", bar.percentage + "%"));
+      row.appendChild(label);
+
+      var track = el("div", "quota-track");
+      var fill = el("div", barClass(bar.percentage));
+      fill.style.width = Math.max(0, Math.min(100, bar.percentage)) + "%";
+      track.appendChild(fill);
+      row.appendChild(track);
+
+      var reset = untilText(bar.resetTime);
+      if (reset) row.appendChild(el("div", "quota-reset", reset));
+
+      card.appendChild(row);
+    });
+
+    if (acct.models && acct.models.length) {
+      card.appendChild(el("h3", "section-title", "models"));
+      var chips = el("div", "chip-row");
+      acct.models.forEach(function (m) {
+        var chip = el("button", "chip", m.id);
+        chip.title = "click to copy · double-click to ping";
+        chip.addEventListener("click", function () {
+          if (!navigator.clipboard) { toast("clipboard unavailable", true); return; }
+          navigator.clipboard.writeText(m.id).then(
+            function () { toast("copied " + m.id); },
+            function () { toast("could not copy", true); });
+        });
+        chip.addEventListener("dblclick", function () { pingAccount(acct.accountId, m.id, chip); });
+        chips.appendChild(chip);
+      });
+      card.appendChild(chips);
+    }
+
+    return card;
+  }
+
+  async function loadQuota() {
+    $("quotaUpdated").textContent = "refreshing…";
+    try {
+      var data = await api("/quota/json");
+      state.quotaFetchedAt = Date.now();
+
+      var accounts = (data && data.accounts) || [];
+      if (state.settings.optimizeQuotaSort) {
+        accounts = accounts.slice().sort(function (a, b) {
+          function worst(x) {
+            return (x.bars || []).reduce(function (m, bar) {
+              return Math.min(m, bar.percentage);
+            }, 100);
+          }
+          return worst(b) - worst(a);
+        });
+      }
+
+      var grid = $("accountGrid");
+      grid.innerHTML = "";
+      accounts.forEach(function (a) { grid.appendChild(accountCard(a)); });
+
+      $("quotaEmpty").hidden = accounts.length > 0;
+      $("quotaSubtitle").textContent = accounts.length
+        ? accounts.length + " account" + (accounts.length === 1 ? "" : "s") +
+          " · click a model chip to copy it, double-click to ping"
+        : " ";
+      $("quotaUpdated").textContent = "updated " + relTime(state.quotaFetchedAt);
+    } catch (e) {
+      $("quotaUpdated").textContent = "could not load quota: " + e.message;
+    }
+  }
+
+  async function pingAccount(accountId, modelId, chip) {
+    var original = chip.textContent;
+    chip.textContent = "pinging…";
+    chip.disabled = true;
+    try {
+      var r = await api("/accounts/ping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "antigravity", accountId: accountId, modelId: modelId })
+      });
+      if (r && r.success) toast(modelId + " ok · " + r.latencyMs + "ms");
+      else toast(modelId + ": " + ((r && r.error) || "failed"), true);
+    } catch (e) {
+      toast(modelId + ": " + e.message, true);
+    } finally {
+      chip.textContent = original;
+      chip.disabled = false;
+    }
+  }
+
+  async function deleteAccount(id) {
+    try {
+      await api("/accounts/" + encodeURIComponent(id), { method: "DELETE" });
+      toast("account removed");
+      loadQuota();
+    } catch (e) {
+      toast("remove failed: " + e.message, true);
+    }
+  }
+
+  // Switching an account off is a pause, not a delete: the credentials stay and
+  // it can be switched back on without signing in again.
+  async function setAccountEnabled(id, enabled, input) {
+    input.disabled = true;
+    try {
+      var res = await api("/accounts/" + encodeURIComponent(id) + "/enabled", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled: enabled })
+      });
+      if (res && res.enabledCount === 0) {
+        toast("all accounts paused - requests will fail", true);
+      } else {
+        toast(enabled ? "account resumed" : "account paused");
+      }
+      loadQuota();
+    } catch (e) {
+      // Put the switch back where it was; the server is the source of truth.
+      input.checked = !enabled;
+      toast("could not change account: " + e.message, true);
+    } finally {
+      input.disabled = false;
+    }
+  }
+
+  $("btnRefreshQuota").addEventListener("click", loadQuota);
+
+  // Sign-in runs in a browser window we cannot control. POST /auth/login blocks
+  // for the whole flow, so the URL is fetched separately and shown here: if the
+  // launch was suppressed or the wrong browser opened, the link is still usable.
+  function signInBody() {
+    var box = el("div");
+    var status = el("p", "setting-desc", "Starting sign-in…");
+    status.id = "signInStatus";
+    box.appendChild(status);
+
+    var linkWrap = el("div");
+    linkWrap.id = "signInLinkWrap";
+    linkWrap.hidden = true;
+    linkWrap.style.marginTop = "12px";
+
+    var link = el("a", null, "");
+    link.id = "signInLink";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.style.cssText = "font-size:11px;font-weight:400;word-break:break-all;display:block;margin-bottom:8px";
+    linkWrap.appendChild(link);
+
+    var copy = el("button", "btn_small", "copy sign-in link");
+    copy.addEventListener("click", function () {
+      var url = link.href;
+      if (!navigator.clipboard) { toast("clipboard unavailable", true); return; }
+      navigator.clipboard.writeText(url).then(
+        function () { toast("link copied"); },
+        function () { toast("could not copy", true); });
+    });
+    linkWrap.appendChild(copy);
+
+    box.appendChild(linkWrap);
+    return box;
+  }
+
+  // Poll for the URL the flow published, and surface it.
+  function watchPendingSignIn() {
+    var tries = 0;
+    var timer = setInterval(async function () {
+      tries++;
+      if (tries > 150) { clearInterval(timer); return; }   // ~5 min, the flow's own timeout
+      try {
+        var p = await api("/auth/login/pending");
+        if (!p || !p.active || !p.url) return;
+        clearInterval(timer);
+
+        var status = document.getElementById("signInStatus");
+        var wrap = document.getElementById("signInLinkWrap");
+        var link = document.getElementById("signInLink");
+        if (!status || !wrap || !link) return;
+
+        link.href = p.url;
+        link.textContent = p.url;
+        wrap.hidden = false;
+        status.textContent = p.browserOpened
+          ? "A browser window should have opened. If it did not, or it opened in the wrong browser, use this link:"
+          : "Could not open a browser automatically. Open this link to sign in:";
+      } catch (e) { /* keep polling; the flow may not have started yet */ }
+    }, 2000);
+    return timer;
+  }
+
+  $("btnAddAccount").addEventListener("click", function () {
+    openModal("Add a Google account",
+      "A browser window will open for Google sign-in. This stays open until you finish, which can take a minute.",
+      async function () {
+        // Reopen the modal in progress mode so the link has somewhere to appear.
+        openModal("Signing in…", signInBody());
+        var timer = watchPendingSignIn();
+        try {
+          var r = await api("/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}"
+          });
+          clearInterval(timer);
+          closeModal();
+          toast(r && r.email ? "added " + r.email : "account added");
+          loadQuota();
+        } catch (e) {
+          clearInterval(timer);
+          var status = document.getElementById("signInStatus");
+          if (status) {
+            status.textContent = "Sign-in failed: " + e.message;
+            status.style.color = "var(--color-danger)";
+          } else {
+            toast("login failed: " + e.message, true);
+          }
+        }
+      }, "open browser");
+  });
+
+  $("btnDiagnostics").addEventListener("click", async function () {
+    try {
+      var r = await api("/auth/diagnostics");
+      openModal("Diagnostics", el("pre", null, JSON.stringify(r, null, 2)));
+    } catch (e) {
+      toast("diagnostics failed: " + e.message, true);
+    }
+  });
+
+  $("btnIdeLogout").addEventListener("click", async function () {
+    var status = null;
+    try { status = await api("/auth/ide/status"); } catch (e) { /* best effort */ }
+    var who = status && status.loggedIn ? (status.email || "the current account") : null;
+    openModal("Log the Antigravity IDE out?",
+      who
+        ? "This closes Antigravity and clears its stored session for " + who + "."
+        : "The IDE does not appear to be signed in. This will still clear any stored session.",
+      async function () {
+        try {
+          var r = await api("/auth/ide/logout", { method: "POST" });
+          var ok = !!(r && r.success);
+          toast(ok ? "IDE session cleared" : ((r && r.error) || "logout failed"), !ok);
+        } catch (e) {
+          toast("logout failed: " + e.message, true);
+        }
+      }, "log out");
+  });
+
+  /* ---------------- usage ---------------- */
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function renderUsage(data) {
+    if (!data) return;
+    state.usage = data;
+
+    var daily = data.daily || [];
+    var models = data.models || [];
+    var todayRow = daily.filter(function (d) { return d.date === data.today; })[0];
+    // Sum the unrounded figures: a week of sub-cent days adds up to nothing at
+    // all if each one is rounded to two decimals first.
+    var weekCost = daily.slice(-7).reduce(function (s, d) { return s + (d.costExact || d.cost || 0); }, 0);
+    var tokens = models.reduce(function (s, m) { return s + (m.input || 0) + (m.output || 0); }, 0);
+
+    $("costToday").textContent = todayRow
+      ? fineMoney(todayRow.costExact, todayRow.cost) : money(0);
+    $("costWeek").textContent = fineMoney(weekCost, weekCost);
+    $("costTotal").textContent = fineMoney(data.totalCostExact, data.totalCost);
+    $("tokenTotal").textContent = num(tokens) + " tokens";
+
+    var box = $("modelBreakdown");
+    box.innerHTML = "";
+    if (!models.length) {
+      box.appendChild(el("div", "empty-state", "no usage recorded yet"));
+    } else {
+      models.forEach(function (m) {
+        var row = el("div", "quota-row");
+        var label = el("div", "quota-label");
+        label.appendChild(el("span", null, m.model));
+        label.appendChild(el("span", "quota-pct", fineMoney(m.costExact, m.cost)));
+        row.appendChild(label);
+        row.appendChild(el("div", "quota-reset", num(m.input) + " in · " + num(m.output) + " out"));
+        if (m.inputRate || m.outputRate) {
+          row.appendChild(el("div", "quota-reset rate-line",
+            rate(m.inputRate) + " in · " + rate(m.outputRate) + " out" +
+            (m.rateBasis ? "  ·  " + m.rateBasis : "")));
+        }
+        box.appendChild(row);
+      });
+    }
+
+    var rateBox = $("rateCards");
+    if (rateBox) {
+      rateBox.innerHTML = "";
+      var lastKind = null;
+      (data.rates || []).forEach(function (r) {
+        if (r.kind !== lastKind) {
+          rateBox.appendChild(el("div", "rate-group",
+            r.kind === "model" ? "published model rates"
+                               : "fallback estimates, by family"));
+          lastKind = r.kind;
+        }
+        var row = el("div", "quota-row");
+        var label = el("div", "quota-label");
+        label.appendChild(el("span", null, r.family));
+        label.appendChild(el("span", "quota-pct", rate(r.input) + " / " + rate(r.output)));
+        row.appendChild(label);
+        row.appendChild(el("div", "quota-reset",
+          "per million tokens, input / output" + (r.note ? "  ·  " + r.note : "")));
+        rateBox.appendChild(row);
+      });
+      $("rateNote").textContent = data.rateNote || "";
+    }
+
+    var canvas = $("dailyChart");
+    $("dailyEmpty").hidden = daily.length > 0;
+    canvas.style.display = daily.length ? "" : "none";
+
+    if (state.chart) { state.chart.destroy(); state.chart = null; }
+    if (!daily.length || typeof Chart === "undefined") return;
+
+    state.chart = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: daily.map(function (d) { return String(d.date).slice(5); }),
+        datasets: [{
+          data: daily.map(function (d) { return d.costExact != null ? d.costExact : d.cost; }),
+          backgroundColor: cssVar("--color-primary"),
+          borderRadius: 4,
+          maxBarThickness: 26
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: cssVar("--color-text-muted"), font: { size: 10 } }
+          },
+          y: {
+            grid: { color: cssVar("--color-border") },
+            ticks: { color: cssVar("--color-text-muted"), font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }
+
+  async function loadUsage() {
+    try { renderUsage(await api("/usage")); }
+    catch (e) { toast("usage failed: " + e.message, true); }
+  }
+
+  $("btnRefreshUsage").addEventListener("click", loadUsage);
+
+  $("btnResetUsage").addEventListener("click", function () {
+    openModal("Reset usage data?",
+      "This clears every recorded token count and cost estimate. It cannot be undone.",
+      async function () {
+        try {
+          await api("/usage/reset", { method: "POST" });
+          toast("usage reset");
+          loadUsage();
+        } catch (e) {
+          toast("reset failed: " + e.message, true);
+        }
+      }, "reset");
+  });
+
+  /* ---------------- logs ---------------- */
+  function logClass(line) {
+    if (/\s200\s/.test(line)) return "log-line ok";
+    if (/\s(4\d\d|5\d\d)[:\s]|error|failed/i.test(line)) return "log-line error";
+    if (/warn|rate limited|retry|recovered/i.test(line)) return "log-line warn";
+    return "log-line";
+  }
+
+  function appendLog(entry) {
+    if (state.logPaused) return;
+    var view = $("logView");
+    view.appendChild(el("div", logClass(entry.line), entry.line));
+    while (view.childElementCount > 2000) view.removeChild(view.firstChild);
+    if ($("logFollow").checked) view.scrollTop = view.scrollHeight;
+  }
+
+  function setLogStatus(text, cls) {
+    $("logStatus").textContent = text;
+    $("logStatus").className = "status-note " + cls;
+  }
+
+  function startLogs() {
+    if (state.logSource) return;
+    $("logView").innerHTML = "";
+    setLogStatus("connecting…", "dim");
+
+    var src = new EventSource("/logs/stream");
+    state.logSource = src;
+
+    src.addEventListener("disabled", function () {
+      setLogStatus("log capture is off — enable “capture logs” in settings", "dim");
+      src.close();
+      state.logSource = null;
+    });
+
+    src.addEventListener("log", function (e) {
+      setLogStatus("connected", "ok");
+      try { appendLog(JSON.parse(e.data)); } catch (err) { /* ignore malformed frame */ }
+    });
+
+    src.addEventListener("error", function () {
+      setLogStatus("disconnected — press reload", "err");
+      src.close();
+      state.logSource = null;
+    });
+  }
+
+  $("btnLogReload").addEventListener("click", function () {
+    if (state.logSource) { state.logSource.close(); state.logSource = null; }
+    startLogs();
+  });
+  $("btnLogClear").addEventListener("click", function () { $("logView").innerHTML = ""; });
+  $("btnLogPause").addEventListener("click", function () {
+    state.logPaused = !state.logPaused;
+    $("btnLogPause").textContent = state.logPaused ? "resume" : "pause";
+  });
+
+  /* ---------------- settings ---------------- */
+  // Only the settings this build actually honours. The routing, tunnel and
+  // watchdog options were dropped along with the features they controlled.
+  var TOGGLES = [
+    ["autoRefresh",       "auto refresh",        "reload quota and usage every 10 minutes"],
+    ["autoOpenDashboard", "auto open dashboard", "open the browser when the server starts"],
+    ["trackUsage",        "track token usage",   "record tokens and estimate cost"],
+    ["captureLogs",       "capture logs",        "keep recent console output for the logs tab"],
+    ["privacyMode",       "privacy mode",        "mask account emails in the dashboard"],
+    ["compactLayout",     "compact layout",      "tighter spacing on account cards"],
+    ["optimizeQuotaSort", "sort by quota",       "reorder these cards by remaining quota - does not change which account serves requests"]
+  ];
+
+  function buildSettings() {
+    var grid = $("settingsGrid");
+    TOGGLES.forEach(function (t) {
+      var row = el("div", "setting");
+
+      var text = el("div", "setting-text");
+      text.appendChild(el("div", "setting-name", t[1]));
+      text.appendChild(el("div", "setting-desc", t[2]));
+      row.appendChild(text);
+
+      var label = el("label", "switch");
+      var input = document.createElement("input");
+      input.type = "checkbox";
+      input.dataset.key = t[0];
+      input.setAttribute("aria-label", t[1]);
+      label.appendChild(input);
+      label.appendChild(el("span"));
+      row.appendChild(label);
+
+      grid.appendChild(row);
+    });
+  }
+
+  function toggleInputs() {
+    return document.querySelectorAll("#settingsGrid input[type=checkbox]");
+  }
+
+  function paintSettings() {
+    Array.prototype.forEach.call(toggleInputs(), function (i) {
+      i.checked = !!state.settings[i.dataset.key];
+    });
+    $("setLanguage").value = state.settings.language || "en";
+  }
+
+  function collectSettings() {
+    var out = { language: $("setLanguage").value };
+    Array.prototype.forEach.call(toggleInputs(), function (i) {
+      out[i.dataset.key] = i.checked;
+    });
+    return out;
+  }
+
+  async function loadSettings() {
+    try {
+      state.settings = (await api("/settings")) || {};
+      paintSettings();
+      scheduleAutoRefresh();
+    } catch (e) {
+      toast("settings failed: " + e.message, true);
+    }
+  }
+
+  $("btnSaveSettings").addEventListener("click", async function () {
+    try {
+      state.settings = await api("/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(collectSettings())
+      });
+      paintSettings();
+      scheduleAutoRefresh();
+      toast("settings saved");
+      loadQuota();
+    } catch (e) {
+      toast("save failed: " + e.message, true);
+    }
+  });
+
+  $("btnEnableAll").addEventListener("click", function () {
+    Array.prototype.forEach.call(toggleInputs(), function (i) { i.checked = true; });
+  });
+  $("btnDisableAll").addEventListener("click", function () {
+    Array.prototype.forEach.call(toggleInputs(), function (i) { i.checked = false; });
+  });
+
+  /* ---------------- updates ---------------- */
+  async function checkUpdates(manual) {
+    var s = $("updateStatus");
+    s.textContent = "checking…";
+    s.className = "status-note dim";
+    try {
+      var d = await api("/updates/check");
+      if (d.canApply) {
+        s.textContent = "update available: " + d.currentVersion + " → " + d.latestVersion;
+        s.className = "status-note ok";
+        $("btnApplyUpdate").disabled = false;
+      } else if (d.status === "current") {
+        s.textContent = "up to date (" + d.currentVersion + ")";
+        s.className = "status-note dim";
+      } else {
+        s.textContent = (d.message || "no update available") +
+          (d.commandHint ? " · " + d.commandHint : "");
+        s.className = "status-note dim";
+      }
+    } catch (e) {
+      s.textContent = "update check failed: " + e.message;
+      s.className = "status-note err";
+      if (manual) toast("update check failed", true);
+    }
+  }
+
+  $("btnCheckUpdate").addEventListener("click", function () { checkUpdates(true); });
+  $("btnApplyUpdate").addEventListener("click", async function () {
+    try {
+      var r = await api("/updates/apply", { method: "POST" });
+      var ok = !!(r && r.success);
+      toast(ok ? "update finished" : ((r && r.error) || "update failed"), !ok);
+    } catch (e) {
+      toast("update failed: " + e.message, true);
+    }
+  });
+
+  /* ---------------- auto refresh ---------------- */
+  function scheduleAutoRefresh() {
+    clearInterval(state.refreshTimer);
+    if (!state.settings.autoRefresh) return;
+    state.refreshTimer = setInterval(function () {
+      loadQuota();
+      if (state.page === "usage") loadUsage();
+    }, 10 * 60 * 1000);
+  }
+
+  // Keep the "updated Xs ago" line honest without refetching.
+  setInterval(function () {
+    if (state.quotaFetchedAt) {
+      $("quotaUpdated").textContent = "updated " + relTime(state.quotaFetchedAt);
+    }
+  }, 15000);
+
+  /* ---------------- boot ---------------- */
+  buildSettings();
+  loadSettings().then(function () {
+    loadQuota();
+    loadUsage();
+  });
+})();
+</script>
+</body>
+</html>
