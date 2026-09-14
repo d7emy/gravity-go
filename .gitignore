@@ -1,0 +1,60 @@
+# Build output
+gravity-go
+gravity-go.exe
+*.exe
+/dist/
+/bin/
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Go module cache / vendor at repo root (we don't vendor deps).
+# NOTE: internal/server/public/vendor/ holds the EMBEDDED dashboard assets
+# (app.css, chart.umd.min.js, comfortaa.woff2) shipped inside the binary via
+# go:embed — it must stay tracked, so this rule is root-only on purpose.
+/vendor/
+
+# Test, coverage and profiling artifacts
+*.test
+*.out
+coverage.html
+coverage.out
+coverage.txt
+*.cover
+*.prof
+*.pprof
+/cpu.out
+/mem.out
+
+# Local dev backups — old dashboard HTML, never push
+.backup-frontend/
+
+# Env files, credentials and secrets — never commit
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.p12
+auth.json
+accounts.json
+settings.json
+usage.json
+quota-cache.json
+
+# Runtime logs
+*.log
+logs/
+
+# Editor/OS noise
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+$RECYCLE.BIN/
