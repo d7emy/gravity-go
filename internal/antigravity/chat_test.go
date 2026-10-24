@@ -452,7 +452,7 @@ func useTwoAccounts(t *testing.T, primary, backup string) {
 // is the whole point of the rotation policy — drain one, then move on — so it
 // is asserted against the real chat path rather than the manager alone.
 func TestExhaustedAccountFailsOverToTheNext(t *testing.T) {
-	const primary, backup = "acct-b@example.com", "acct-a@example.com"
+	const primary, backup = acctFirst, acctSecond
 	useTwoAccounts(t, primary, backup)
 
 	var mu sync.Mutex
@@ -522,7 +522,7 @@ func TestExhaustedAccountFailsOverToTheNext(t *testing.T) {
 // unguarded, switching every account off in the dashboard still served requests
 // from the paused credential: the switch looked right and did nothing.
 func TestAllAccountsPausedRefusesToServe(t *testing.T) {
-	const primary, backup = "acct-b@example.com", "acct-a@example.com"
+	const primary, backup = acctFirst, acctSecond
 	useTwoAccounts(t, primary, backup)
 
 	// A process-level token is present, exactly as it is in a real install.

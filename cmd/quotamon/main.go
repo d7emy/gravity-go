@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -63,7 +64,7 @@ type sample struct {
 
 func main() {
 	baseURL := flag.String("url", "http://127.0.0.1:8964", "gravity-go base URL")
-	account := flag.String("account", "you@example.com", "account id (email)")
+	account := flag.String("account", "", "account id (email); default: the first account the server lists")
 	interval := flag.Duration("interval", 5*time.Second, "poll interval")
 	count := flag.Int("count", 0, "number of polls before exiting (0 = forever)")
 	canary := flag.Bool("canary", false, "send completions each poll to prove traffic lands")
@@ -76,6 +77,15 @@ func main() {
 	flag.Parse()
 
 	client := &http.Client{}
+
+	if *account == "" {
+		first, err := firstAccount(context.Background(), client, *baseURL)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "quotamon: %v (pass -account to choose one)\n", err)
+			os.Exit(1)
+		}
+		*account = first
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -135,6 +145,20 @@ func main() {
 		}
 	}
 	fmt.Printf("done: %d polls, %d with quota movement\n", polls, changed)
+}
+
+// firstAccount returns the first account the server lists, for when -account is
+// not given. Which one that is follows the stored order, so pass -account to pin a
+// specific account down.
+func firstAccount(ctx context.Context, client *http.Client, baseURL string) (string, error) {
+	var quota quotaSnapshot
+	if err := getJSON(ctx, client, baseURL+"/quota/json", &quota); err != nil {
+		return "", fmt.Errorf("quota: %w", err)
+	}
+	if len(quota.Accounts) == 0 {
+		return "", errors.New("the server lists no accounts")
+	}
+	return quota.Accounts[0].AccountID, nil
 }
 
 func takeSample(ctx context.Context, client *http.Client, baseURL, account string) (*sample, error) {

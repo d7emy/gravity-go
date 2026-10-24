@@ -418,6 +418,15 @@ func TestClearAllRateLimits(t *testing.T) {
 	}
 }
 
+// Placeholder account ids shared by the rotation tests in this package. The first
+// sorts after the second on purpose: several tests assert that the stored order,
+// not alphabetical order, decides which account is used first, and that
+// distinction disappears if the two orders happen to agree.
+const (
+	acctFirst  = "acct-b@example.com"
+	acctSecond = "acct-a@example.com"
+)
+
 // writeAccountsFile lays down an accounts.json in the given order and points the
 // manager at a fresh data dir, so loading exercises the real persisted path.
 func writeAccountsFile(t *testing.T, emails ...string) {
@@ -454,7 +463,7 @@ func writeAccountsFile(t *testing.T, emails ...string) {
 // randomises map iteration. Which account drained first therefore changed from
 // one run to the next. The stored file order has to decide it.
 func TestQueueOrderFollowsTheStoredFileNotMapOrder(t *testing.T) {
-	const first, second = "acct-b@example.com", "acct-a@example.com"
+	const first, second = acctFirst, acctSecond
 
 	// Repeat: a single run could match the intended order by chance.
 	for i := 0; i < 20; i++ {
@@ -480,7 +489,7 @@ func TestQueueOrderFollowsTheStoredFileNotMapOrder(t *testing.T) {
 // The behaviour asked for end to end: one account is used exclusively until it
 // is exhausted, and only then does traffic move to the next one.
 func TestOneAccountIsDrainedBeforeSwitching(t *testing.T) {
-	const primary, backup = "acct-b@example.com", "acct-a@example.com"
+	const primary, backup = acctFirst, acctSecond
 	writeAccountsFile(t, primary, backup)
 
 	m := &Manager{accounts: map[string]*Account{}, inFlight: map[string]int{},
@@ -526,8 +535,8 @@ func TestOneAccountIsDrainedBeforeSwitching(t *testing.T) {
 // Marking a cooldown must work on a manager that has not served a request yet.
 // It used to miss the account entirely and drop the signal on the floor.
 func TestMarkRateLimitedLoadsAccountsFirst(t *testing.T) {
-	const primary = "acct-b@example.com"
-	writeAccountsFile(t, primary, "acct-a@example.com")
+	const primary = acctFirst
+	writeAccountsFile(t, primary, acctSecond)
 
 	m := &Manager{accounts: map[string]*Account{}, inFlight: map[string]int{},
 		refreshing: map[string]chan struct{}{}}
@@ -543,7 +552,7 @@ func TestMarkRateLimitedLoadsAccountsFirst(t *testing.T) {
 // With every account exhausted there is nothing to hand out, and the caller must
 // be told rather than handed a rate-limited account.
 func TestAllAccountsExhaustedReturnsNothing(t *testing.T) {
-	const primary, backup = "acct-b@example.com", "acct-a@example.com"
+	const primary, backup = acctFirst, acctSecond
 	writeAccountsFile(t, primary, backup)
 
 	m := &Manager{accounts: map[string]*Account{}, inFlight: map[string]int{},
@@ -634,7 +643,7 @@ func TestRotationHandsOverToTheNextAccountInOrder(t *testing.T) {
 // account is drained first, the drain target silently changed from run to run —
 // the deeper cause of the non-deterministic rotation.
 func TestSaveRoundTripsTheOrderItLoaded(t *testing.T) {
-	const first, second = "acct-b@example.com", "acct-a@example.com"
+	const first, second = acctFirst, acctSecond
 
 	// Repeat: with two accounts a single save has even odds of looking correct.
 	for i := 0; i < 20; i++ {
@@ -668,7 +677,7 @@ func TestSaveRoundTripsTheOrderItLoaded(t *testing.T) {
 // Demotion is a deliberate reorder and must survive a save, or a failed account
 // would climb back to the front on the next start.
 func TestDemotionIsPersisted(t *testing.T) {
-	const first, second = "acct-b@example.com", "acct-a@example.com"
+	const first, second = acctFirst, acctSecond
 	writeAccountsFile(t, first, second)
 
 	m := &Manager{accounts: map[string]*Account{}, inFlight: map[string]int{},
@@ -885,7 +894,7 @@ func TestByIDRefusesADisabledAccount(t *testing.T) {
 // The switch has to survive a restart, or a paused account quietly comes back
 // the next time the process starts.
 func TestDisabledStatePersistsAcrossRestart(t *testing.T) {
-	const first, second = "acct-b@example.com", "acct-a@example.com"
+	const first, second = acctFirst, acctSecond
 	writeAccountsFile(t, first, second)
 
 	m := &Manager{accounts: map[string]*Account{}, inFlight: map[string]int{},
