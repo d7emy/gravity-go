@@ -37,6 +37,26 @@ Note that `fetchAvailableModels` lags the rollout — 3.8 serves normally but do
 not appear in that catalogue. A model missing from it is not proof it is
 unavailable; probe the id directly.
 
+### Gemini 4 Argon
+
+`gemini-4-argon`, `gemini-4-argon-low`, `gemini-4-argon-medium` and
+`gemini-4-argon-high` are accepted but deliberately not listed above or in
+`GET /v1/models`. Antigravity only serves Argon on paid plans and gives it a weekly
+quota of its own, so listing it would show most accounts a model that answers
+`404 NOT_FOUND`. If your account has it, send the id yourself; the suffix picks the
+thinking level.
+
+The id it is sent upstream as (`gemini-4-argon`, Google's public API id) has not
+been confirmed against an entitled account. If it 404s for you, compare it with the
+keys in your own catalogue and report what you see:
+
+```bash
+PROBE=1 go test ./internal/antigravity/ -run TestProbeUpstreamModelCatalogue -v
+```
+
+What was checked, what is still assumed, and the steps to finish confirming it are
+in [ARGON.md](ARGON.md).
+
 ---
 
 ## Anthropic Messages API

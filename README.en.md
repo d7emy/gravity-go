@@ -91,6 +91,8 @@ Data is stored in `~/.gravity-go`; if you have an old `~/.anti-api` folder it ge
 
 `GET /v1/models` works on a whitelist basis — you can call other models by name and it translates them internally (`-high` to the real `-tiered` ids).
 
+Plan-gated models such as Gemini 4 Argon can be called by id but are not listed; what is confirmed about them, and what isn't, is in [ARGON.md](ARGON.md).
+
 * **Anthropic:** `POST /v1/messages` (plus `/v1beta/messages` and `/messages`).
 * **OpenAI:** `POST /v1/chat/completions` — with `reasoning_effort` and `stream_options.include_usage`.
 * **Search:** `GET|POST /search` — documented answers with their sources.

@@ -27,6 +27,16 @@ var AvailableModels = []ModelInfo{
 	{ID: "gemini-3.8-flash-medium", Name: "Gemini 3.8 Flash (Medium)"},
 	{ID: "gemini-3.8-flash-high", Name: "Gemini 3.8 Flash (High)"},
 
+	// Argon is Gemini 4, Google's flagship. Antigravity only serves it on paid
+	// plans and gives it a weekly quota of its own, so it stays out of
+	// visibleModels like Cyber below: a listing must not advertise a model that
+	// 404s for most accounts. It is catalogued here so an entitled account can
+	// call it by id.
+	{ID: "gemini-4-argon", Name: "Gemini 4 Argon"},
+	{ID: "gemini-4-argon-low", Name: "Gemini 4 Argon (Low)"},
+	{ID: "gemini-4-argon-medium", Name: "Gemini 4 Argon (Medium)"},
+	{ID: "gemini-4-argon-high", Name: "Gemini 4 Argon (High)"},
+
 	// Cyber is Fairwind-gated server-side: without an entitled project every
 	// one of these 404s (verified 2026-09-05 on three accounts). They stay out
 	// of visibleModels so listings never advertise them; they are listed here
@@ -102,6 +112,24 @@ var modelMapping = map[string]string{
 	"gemini-3.8-flash-medium": "gemini-3.8-flash-tiered",
 	"gemini-3.8-flash-high":   "gemini-3.8-flash-tiered",
 	"gemini-3.8-flash-tiered": "gemini-3.8-flash-tiered",
+
+	// Argon. gemini-4-argon is the public API id, Google documents low, medium and
+	// high thinking levels for it, and Antigravity's own client names its variants
+	// gemini-4-argon-low/-medium/-high -- the same shape as 3.8 Flash above. So
+	// every variant collapses onto one upstream id and the suffix selects the
+	// thinking level in buildUpstreamRequest.
+	//
+	// NOT CONFIRMED ON THE WIRE: no entitled account was available. On 2026-10-24
+	// an account without Argon answered gemini-4-argon, -tiered, -low, -medium,
+	// -high and -agent with exactly the 404 a made-up id gets, so upstream gives no
+	// way to tell a wrong id from a missing entitlement. If an entitled account's
+	// catalogue (see TestProbeUpstreamModelCatalogue) shows a different key, change
+	// the right-hand side here -- for instance to gemini-4-argon-tiered, as 3.7 and
+	// 3.8 Flash use.
+	"gemini-4-argon":        "gemini-4-argon",
+	"gemini-4-argon-low":    "gemini-4-argon",
+	"gemini-4-argon-medium": "gemini-4-argon",
+	"gemini-4-argon-high":   "gemini-4-argon",
 
 	// Cyber passthrough: no public wire id is documented and no
 	// fetchAvailableModels dump has shown one, so every variant maps onto

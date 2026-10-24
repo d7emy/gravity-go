@@ -91,6 +91,8 @@ gravity-go version               # يطبع لك رقم الإصدار
 
 مسار `GET /v1/models` يشتغل بنظام القائمة البيضاء (whitelist) — تقدر تنادي موديلات ثانية بأسمائها ويسوي لها تحويل داخلي (يحول `-high` إلى المعرفات الفعلية `-tiered`).
 
+الموديلات اللي تحتاج خطة مدفوعة مثل Gemini 4 Argon تقدر تناديها بالاسم، بس ما تظهر في القائمة. وش اللي متأكدين منه وش اللي ما تأكدنا منه تلقاه في [ARGON.md](ARGON.md).
+
 * **Anthropic:** مسارات `POST /v1/messages` (مع `/v1beta/messages` و `/messages`).
 * **OpenAI:** مسار `POST /v1/chat/completions` — مع خيارات `reasoning_effort` و `stream_options.include_usage`.
 * **البحث:** مسار `GET|POST /search` — يعطيك إجابات موثقة مع مصادرها.

@@ -513,3 +513,41 @@ func TestFlashThinkingLevelSurvivesTheCollapse(t *testing.T) {
 		}
 	}
 }
+
+// Argon collapses onto one upstream id too, so its level has to survive the same
+// way -- and the bare id must leave the choice to upstream rather than force one.
+func TestArgonThinkingLevelSurvivesTheCollapse(t *testing.T) {
+	for _, tc := range []struct{ model, wantLevel string }{
+		{"gemini-4-argon-low", "low"},
+		{"gemini-4-argon-medium", "medium"},
+		{"gemini-4-argon-high", "high"},
+	} {
+		request := buildRequest(t, ChatRequest{
+			Model:    tc.model,
+			Messages: []Message{userMessage("hi")},
+		}, tc.model)
+
+		if request["model"] != "gemini-4-argon" {
+			t.Errorf("%s: upstream model = %v, want gemini-4-argon", tc.model, request["model"])
+		}
+		genConfig := innerOf(t, request)["generationConfig"].(map[string]any)
+		thinking, ok := genConfig["thinkingConfig"].(map[string]any)
+		if !ok {
+			t.Errorf("%s: thinkingConfig missing", tc.model)
+			continue
+		}
+		if thinking["thinkingLevel"] != tc.wantLevel {
+			t.Errorf("%s: thinkingLevel = %v, want %q",
+				tc.model, thinking["thinkingLevel"], tc.wantLevel)
+		}
+	}
+
+	bare := buildRequest(t, ChatRequest{
+		Model:    "gemini-4-argon",
+		Messages: []Message{userMessage("hi")},
+	}, "gemini-4-argon")
+	genConfig := innerOf(t, bare)["generationConfig"].(map[string]any)
+	if _, forced := genConfig["thinkingConfig"]; forced {
+		t.Error("gemini-4-argon forced a thinking level; it should be left to upstream")
+	}
+}

@@ -48,3 +48,38 @@ func TestGemini38IsListedAnd37StaysCallable(t *testing.T) {
 		t.Errorf("3.7 must remain callable: got %q", got)
 	}
 }
+
+// The ids Antigravity's own client uses for Gemini 4 Argon.
+var argonIDs = []string{
+	"gemini-4-argon",
+	"gemini-4-argon-low",
+	"gemini-4-argon-medium",
+	"gemini-4-argon-high",
+}
+
+// Argon's variants collapse onto one upstream id, as 3.8 Flash's do: the suffix is
+// client-facing and picks the thinking level.
+func TestArgonMapsOntoOneUpstreamID(t *testing.T) {
+	for _, id := range argonIDs {
+		if got := UpstreamModelName(id); got != "gemini-4-argon" {
+			t.Errorf("UpstreamModelName(%q) = %q, want gemini-4-argon", id, got)
+		}
+	}
+}
+
+// Argon needs a paid plan, so like Cyber it must stay callable by id but out of
+// listings: advertising it would show most accounts a model that 404s for them.
+func TestArgonIsCallableButNotListed(t *testing.T) {
+	catalogued := map[string]bool{}
+	for _, model := range AvailableModels {
+		catalogued[model.ID] = true
+	}
+	for _, id := range argonIDs {
+		if !catalogued[id] {
+			t.Errorf("%q is missing from AvailableModels", id)
+		}
+		if IsVisibleModel(id) {
+			t.Errorf("IsVisibleModel(%q) = true, want false (plan-gated, must stay hidden)", id)
+		}
+	}
+}
