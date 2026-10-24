@@ -76,7 +76,7 @@ For OpenCode, add it under the provider's `models`:
 
 **Quota.** Argon's weekly-only quota should show up as an extra group in
 `/quota/json` for an entitled account. That has not been observed. Argon is
-deliberately not part of the single "Gemini" bar the dashboard builds from per-model
+deliberately not part of the single "Gemini 5h" bar the dashboard builds from per-model
 quota (`geminiProModelIDs` and `geminiFlashModelIDs` in
 `internal/antigravity/quota.go`): a separate quota folded into a shared one would
 make that bar misreport.

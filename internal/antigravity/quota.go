@@ -246,9 +246,15 @@ func BuildModelBars(models map[string]ModelQuota) []QuotaBar {
 // It is one bar rather than a Pro and a Flash one: on these accounts every Gemini
 // model reports the same fraction and reset, because they draw on a single pool.
 // Where they did differ, the bar shows the most constrained.
+//
+// That pool is the 5-hour limit: its reset time is five hours after first use, as
+// the Claude group's per-model reset is the reset of its 3p-5h bucket, so the bar
+// is keyed and labelled like the summary's own gemini-5h. There is no weekly
+// figure to pair it with: for such an account neither the summary,
+// retrieveUserQuota nor fetchAvailableModels reports a weekly Gemini limit.
 func BuildGeminiModelBar(models map[string]ModelQuota) (QuotaBar, bool) {
 	ids := append(append([]string(nil), geminiProModelIDs...), geminiFlashModelIDs...)
-	return groupBar("gemini", "Gemini", models, ids)
+	return groupBar("gemini-5h", "Gemini 5h", models, ids)
 }
 
 // mergedBar is groupBar for callers that want a placeholder when no model in the

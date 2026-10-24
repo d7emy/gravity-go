@@ -344,6 +344,9 @@ button:disabled:hover { background: transparent; color: var(--color-text-muted);
 .quota-fill.warn { background: linear-gradient(90deg, var(--color-warning), var(--color-star)); }
 .quota-fill.low  { background: linear-gradient(90deg, #c0392b, var(--color-danger)); }
 .quota-reset { font-size: 11px; font-weight: 400; color: var(--color-text-faint); margin-top: 4px; }
+/* Stands in for a limit Google does not report: muted, and not shouted in capitals
+   like a real reading, so it cannot be mistaken for one. */
+.quota-none { font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--color-text-faint); }
 /* The rate a usage row was priced at. It sits under the token counts but is
    not dimmed further: the faint colour is already near the floor of what is
    readable in light theme, and stacking opacity on top of it pushed this

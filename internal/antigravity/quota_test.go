@@ -80,8 +80,8 @@ func TestBuildGeminiModelBar(t *testing.T) {
 	}
 	// Across Pro and Flash alike, the bar reports the most constrained model and
 	// the soonest reset.
-	if bar.Key != "gemini" || bar.Label != "Gemini" || bar.Percentage != 35 || bar.ResetTime != soon {
-		t.Errorf("bar = %+v, want gemini/Gemini at 35%% resetting %s", bar, soon)
+	if bar.Key != "gemini-5h" || bar.Label != "Gemini 5h" || bar.Percentage != 35 || bar.ResetTime != soon {
+		t.Errorf("bar = %+v, want gemini-5h/Gemini 5h at 35%% resetting %s", bar, soon)
 	}
 }
 

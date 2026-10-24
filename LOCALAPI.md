@@ -940,7 +940,7 @@ When the last account is paused, `enabledCount:0` — dashboard should warn.
 
 `internal/server/misc.go:41` — snapshot for dashboard cards. Built by `internal/quotaagg/quotaagg.go:92`.
 
-**Behavior:** Fans out one goroutine per stored account, bounded by a jittered 3..5s window around `fetchTimeout = 4s` (`internal/antigravity.QuotaFetchTimeout`). Each account hits `retrieveUserQuotaSummary` then falls back to `fetchAvailableModels` (→ grouped bars). If the summary succeeds but has no Gemini bucket (accounts metered only on "Claude and GPT models" still serve Gemini), `fetchAvailableModels` is also read to prepend a single `Gemini` bar; a failure there leaves the summary bars as they are. Uses cached bars on failure; `quota-cache.json` is written to disk for offline starts. Token refresh is delegated to manager (coalesced).
+**Behavior:** Fans out one goroutine per stored account, bounded by a jittered 3..5s window around `fetchTimeout = 4s` (`internal/antigravity.QuotaFetchTimeout`). Each account hits `retrieveUserQuotaSummary` then falls back to `fetchAvailableModels` (→ grouped bars). If the summary succeeds but has no Gemini bucket (accounts metered only on "Claude and GPT models" still serve Gemini), `fetchAvailableModels` is also read to prepend a single `gemini-5h` ("Gemini 5h") bar; a failure there leaves the summary bars as they are. Uses cached bars on failure; `quota-cache.json` is written to disk for offline starts. Token refresh is delegated to manager (coalesced).
 
 **Response (`internal/quotaagg/quotaagg.go:38`):**
 
@@ -969,7 +969,7 @@ When the last account is paused, `enabledCount:0` — dashboard should warn.
 }
 ```
 
-Bars are either **summary bars** (`BuildQuotaBars` from `internal/antigravity/quota.go:159`) or **model-grouped bars** (`BuildModelBars`: `claude&gpt`, `gpro`, `gflash` — worst-case percentage per group, soonest `resetTime`). When the summary has no Gemini bucket, `BuildGeminiModelBar` adds one `gemini` bar ahead of the summary bars: the lowest remaining fraction across the Gemini models in the catalogue (they share a single pool on these accounts) and the soonest `resetTime`, which is the per-model window and has been the 5-hour one. No bar is added when the catalogue lists no Gemini model. Default zeroed bars when both endpoints fail.
+Bars are either **summary bars** (`BuildQuotaBars` from `internal/antigravity/quota.go:159`) or **model-grouped bars** (`BuildModelBars`: `claude&gpt`, `gpro`, `gflash` — worst-case percentage per group, soonest `resetTime`). When the summary has no Gemini bucket, `BuildGeminiModelBar` adds one `gemini-5h` bar (label "Gemini 5h") ahead of the summary bars: the lowest remaining fraction across the Gemini models in the catalogue (they share a single pool on these accounts, which follows the 5-hour window) and the soonest `resetTime`. Such accounts have no weekly Gemini figure in any endpoint (`retrieveUserQuotaSummary`, `retrieveUserQuota` and `fetchAvailableModels` were all checked), so the dashboard shows a muted "Gemini weekly: not reported" line under the bar instead of inventing one. No bar is added when the catalogue lists no Gemini model. Default zeroed bars when both endpoints fail.
 
 ```bash
 curl -s http://127.0.0.1:8964/quota/json | jq .

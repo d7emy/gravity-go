@@ -117,7 +117,7 @@ func TestQueryQuotaAddsGeminiWhenSummaryOmitsIt(t *testing.T) {
 		t.Fatalf("queryQuota: %v", err)
 	}
 
-	assertKeys(t, bars, "gemini", "3p-weekly", "3p-5h")
+	assertKeys(t, bars, "gemini-5h", "3p-weekly", "3p-5h")
 	if bars[0].Percentage != 40 || bars[0].ResetTime != "2026-10-24T16:57:08Z" {
 		t.Errorf("Gemini = %+v, want 40%% resetting 16:57:08Z", bars[0])
 	}

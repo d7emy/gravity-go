@@ -369,6 +369,17 @@
     return pct <= 15 ? "quota-fill low" : pct <= 40 ? "quota-fill warn" : "quota-fill";
   }
 
+  // Stands in for a weekly Gemini limit Google does not report for this account.
+  function noWeeklyRow() {
+    var row = el("div", "quota-row");
+    var label = el("div", "quota-label");
+    label.appendChild(el("span", null, "Gemini weekly"));
+    label.appendChild(el("span", "quota-pct quota-none", "not reported"));
+    row.appendChild(label);
+    row.appendChild(el("div", "quota-reset", "Google reports no weekly Gemini limit for this account"));
+    return row;
+  }
+
   function accountCard(acct) {
     var card = el("div", "card account-card fade-in");
     if (state.settings.compactLayout) card.style.padding = "12px";
@@ -414,6 +425,12 @@
       card.appendChild(el("div", "account-off-note", "paused - not receiving requests"));
     }
 
+    // Google lists a weekly Gemini limit only for accounts that have one. Where it
+    // reports just the 5-hour limit, say so under that bar so the missing row does
+    // not read as a bug.
+    var barKeys = {};
+    (acct.bars || []).forEach(function (bar) { barKeys[bar.key] = true; });
+
     (acct.bars || []).forEach(function (bar) {
       var row = el("div", "quota-row");
 
@@ -432,6 +449,10 @@
       if (reset) row.appendChild(el("div", "quota-reset", reset));
 
       card.appendChild(row);
+
+      if (bar.key === "gemini-5h" && !barKeys["gemini-weekly"]) {
+        card.appendChild(noWeeklyRow());
+      }
     });
 
     if (acct.models && acct.models.length) {
