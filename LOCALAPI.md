@@ -1233,10 +1233,11 @@ Enforced via `Accounts.AcquireLock` (`internal/antigravity/accounts.go:761`) —
 * `401` → single token refresh then rotate if multiple accounts.
 * `429` logic `internal/antigravity/chat.go:199`:
   * Parse `Retry-After` / body `retryDelay`; classify as `quota_exhausted` vs transient via `isQuotaExhaustedErrorText` (`internal/antigravity/response.go:373`) — `QUOTA_EXHAUSTED` detail, `quota`+`reset`, `quota_exhausted`.
+  * **Host sweep first.** A plain (non-quota) 429 is held back and the remaining hosts are tried before it is judged (`holdPlain429`, `internal/antigravity/hosts.go`): some accounts are turned away by one host for every model while the others serve them fine, and reading that as the account's own limit cost a wait, a retry and sometimes a rest and a switch of account. If a later host serves the request, the refusing host is remembered per account for 5 minutes and tried last (`orderedBaseURLs`; the order stays random among the other hosts); a remembered host's 429 is ignored from then on and cannot hide a real `404`. Only when no host serves the request is the held 429 judged as below. A spent quota (`QUOTA_EXHAUSTED`) is never held back.
   * Transient (not exhausted): up to `2` retries on same account with increasing wait (cap `4s`), holding rate limit during wait (`HoldRateLimit`).
   * Exhausted: `MarkRateLimitedFromError` (duration from server delay + 500ms, else `10s`; fallback escalates `1m→5m→30m→2h` by failure count), `MoveToEndOfQueue`, transparent retry on `NextExcluding` (naming account to avoid, not `forceRotate` which would skip newly-promoted head).
   * Non-quota 429 out of retries: cooldown `max(delay, 8s)` then rotate; if rotated out, `Retryable:true`.
-* `403`/`408`/`404`/`5xx` → try next `baseURL` (`shouldTryNextEndpoint`); `429` is **not** endpoint-retried (account-specific).
+* `403`/`408`/`404`/`5xx` → try next `baseURL` (`shouldTryNextEndpoint`); a spent-quota `429` is **not** endpoint-retried (account-specific); a plain `429` is (see the host sweep above).
 * When all accounts are rate-limited:
   * If min wait ≤ `2s` → clear only short cooldowns (`≤2s`) and let best through (preserves long `quota_exhausted` backoffs).
   * Else → `log Warn` and return `nil` → caller's error path surfaces `429`.

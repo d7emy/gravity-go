@@ -111,6 +111,13 @@ type attemptState struct {
 	preferredStatus     int
 	preferredBody       string
 	preferredRetryAfter string
+
+	// The host sweep within one attempt; see holdPlain429.
+	host         string
+	hostsLeft    int
+	lastHeld     bool
+	deferred     *heldAnswer
+	refusedHosts []string
 }
 
 // classifyFailure decides what to do about one non-2xx response. The returned
@@ -124,6 +131,7 @@ func (s *attemptState) classifyFailure(
 	request map[string]any,
 	allowRotation bool,
 ) (action string, err error) {
+	s.lastHeld = false
 	if traceID := ExtractTraceID(body); traceID != "" {
 		logx.Raw(fmt.Sprintf("[%s] %d upstream traceId=%s", logx.FormatTime(), status, traceID))
 	}
@@ -152,6 +160,11 @@ func (s *attemptState) classifyFailure(
 		}
 	}
 
+	// A plain 429 may be one host turning the account away, not the account being
+	// limited: let the other hosts answer before judging it (see holdPlain429).
+	if status == 429 && s.holdPlain429(body, retryAfter) {
+		return "next", nil
+	}
 	if status == 429 && s.accountID != "" {
 		return s.classify429(ctx, body, retryAfter, request, allowRotation)
 	}
@@ -302,8 +315,12 @@ func sendRequestBuffered(
 		retryAttempt := false
 
 		// Host order is shuffled per attempt so this client does not sweep
-		// endpoints in clone-identical order. Every host is still tried.
-		for _, baseURL := range shuffledBaseURLs() {
+		// endpoints in clone-identical order. Every host is still tried; one that
+		// has been turning this account away goes last.
+		hosts := orderedBaseURLs(state.accountID)
+		state.beginAttempt()
+		for i, baseURL := range hosts {
+			state.tryHost(baseURL, len(hosts)-i-1)
 			payload, err := json.Marshal(request)
 			if err != nil {
 				return nil, err
@@ -328,6 +345,7 @@ func sendRequestBuffered(
 					continue
 				}
 
+				state.served()
 				if state.accountID != "" {
 					Accounts.MarkSuccess(state.accountID)
 				}
@@ -340,13 +358,16 @@ func sendRequestBuffered(
 			resp.Body.Close()
 			cancel()
 
-			lastStatus = resp.StatusCode
-			lastBody = string(rawBody)
-			lastRetryAfter = retryAfter
-			logx.Warn("SSE error %d %s", lastStatus, truncate(lastBody, 200))
+			status, body := resp.StatusCode, string(rawBody)
+			logx.Warn("SSE error %d %s", status, truncate(body, 200))
 
 			action, failErr := state.classifyFailure(
-				ctx, lastStatus, lastBody, lastRetryAfter, request, allowRotation)
+				ctx, status, body, retryAfter, request, allowRotation)
+			// A 429 that was held back, or ignored, says nothing about what to do
+			// once every host has failed, so it must not become the last error.
+			if !state.wasHeld() {
+				lastStatus, lastBody, lastRetryAfter = status, body, retryAfter
+			}
 			switch action {
 			case "retry":
 				retryAttempt = true
@@ -356,6 +377,17 @@ func sendRequestBuffered(
 				return nil, failErr
 			}
 			break // leave the endpoint loop and start a fresh attempt
+		}
+
+		// A plain 429 held back during the sweep, with no host left to serve the
+		// request, is judged now, as the account's own limit.
+		if !retryAttempt {
+			switch action, failErr := state.flushDeferred(ctx, request, allowRotation); action {
+			case "retry":
+				retryAttempt = true
+			case "fail":
+				return nil, failErr
+			}
 		}
 
 		if retryAttempt {
@@ -417,7 +449,10 @@ func sendRequestStreaming(
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		retryAttempt := false
 
-		for _, baseURL := range shuffledBaseURLs() {
+		hosts := orderedBaseURLs(state.accountID)
+		state.beginAttempt()
+		for i, baseURL := range hosts {
+			state.tryHost(baseURL, len(hosts)-i-1)
 			payload, err := json.Marshal(request)
 			if err != nil {
 				return err
@@ -442,10 +477,13 @@ func sendRequestStreaming(
 
 				body := string(rawBody)
 				logx.Warn("SSE error %d %s", status, truncate(body, 200))
-				lastErr = apperr.NewUpstream("antigravity", status, body, retryAfter)
 
 				action, failErr := state.classifyFailure(
 					ctx, status, body, retryAfter, request, allowRotation)
+				// A 429 that was held back, or ignored, must not become the last error.
+				if !state.wasHeld() {
+					lastErr = apperr.NewUpstream("antigravity", status, body, retryAfter)
+				}
 				switch action {
 				case "retry":
 					retryAttempt = true
@@ -457,6 +495,7 @@ func sendRequestStreaming(
 				break
 			}
 
+			state.served()
 			if state.accountID != "" {
 				Accounts.MarkSuccess(state.accountID)
 			}
@@ -479,6 +518,17 @@ func sendRequestStreaming(
 
 			logSuccess(startTime, modelName, state.accountID, routeTag)
 			return nil
+		}
+
+		// A plain 429 held back during the sweep, with no host left to serve the
+		// request, is judged now, as the account's own limit.
+		if !retryAttempt {
+			switch action, failErr := state.flushDeferred(ctx, request, allowRotation); action {
+			case "retry":
+				retryAttempt = true
+			case "fail":
+				return failErr
+			}
 		}
 
 		if !retryAttempt {

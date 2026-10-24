@@ -272,7 +272,7 @@ func PerformWebSearch(ctx context.Context, query string, modelOpt string) (Searc
 		model = GetSearchModel()
 	}
 
-	accessToken, projectID, err := resolveSearchAccount(ctx)
+	accessToken, projectID, accountID, err := resolveSearchAccount(ctx)
 	if err != nil {
 		return SearchResult{}, err
 	}
@@ -286,7 +286,10 @@ func PerformWebSearch(ctx context.Context, query string, modelOpt string) (Searc
 	var lastStatus int
 	var lastBody string
 
-	for _, baseURL := range shuffledBaseURLs() {
+	// Hosts that answered a plain 429 before one served the request are remembered
+	// as refusing this account, so they are tried last next time.
+	var refusedHosts []string
+	for _, baseURL := range orderedBaseURLs(accountID) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+searchEndpoint, strings.NewReader(string(bodyBytes)))
 		if err != nil {
 			continue
@@ -310,10 +313,16 @@ func PerformWebSearch(ctx context.Context, query string, modelOpt string) (Searc
 			continue
 		}
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			for _, host := range refusedHosts {
+				refusals.mark(accountID, host)
+			}
 			return ParseSearchResponse(string(respBody), trimmed, model, time.Since(startedAt).Milliseconds())
 		}
 		lastStatus = resp.StatusCode
 		lastBody = string(respBody)
+		if lastStatus == 429 && !isQuotaExhaustedErrorText(lastBody) {
+			refusedHosts = append(refusedHosts, baseURL)
+		}
 		if lastStatus < 429 {
 			break
 		}
@@ -327,17 +336,17 @@ func PerformWebSearch(ctx context.Context, query string, modelOpt string) (Searc
 	return SearchResult{}, apperr.NewUpstream("antigravity", lastStatus, lastBody, "")
 }
 
-func resolveSearchAccount(ctx context.Context) (string, string, error) {
+func resolveSearchAccount(ctx context.Context) (accessToken, projectID, accountID string, err error) {
 	// Reuse the same rotation logic as chat; for search we don't need AllowRotation flag.
 	if acct := Accounts.NextAvailable(ctx, false); acct != nil {
-		return acct.AccessToken, acct.ProjectID, nil
+		return acct.AccessToken, acct.ProjectID, acct.AccountID, nil
 	}
 	tok, err := GetAccessToken(ctx)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	auth := appstate.GetAuth()
-	return tok, auth.ProjectID, nil
+	return tok, auth.ProjectID, "", nil
 }
 
 func readLimited(resp *http.Response) ([]byte, error) {
