@@ -14,8 +14,12 @@ import (
 
 var cloudCodeBaseURL = "https://cloudcode-pa.googleapis.com"
 
-// SetCloudCodeBaseURLForTest overrides the quota host for contained tests.
-func SetCloudCodeBaseURLForTest(url string) { cloudCodeBaseURL = url }
+// SetCloudCodeBaseURLForTest overrides the quota host for contained tests and
+// returns the previous host so the caller can restore it.
+func SetCloudCodeBaseURLForTest(url string) (previous string) {
+	previous, cloudCodeBaseURL = cloudCodeBaseURL, url
+	return previous
+}
 
 // QuotaBucket is one quota window reported by the summary endpoint.
 type QuotaBucket struct {
@@ -188,7 +192,21 @@ func BuildQuotaBars(summary QuotaSummary) []QuotaBar {
 	return bars
 }
 
+// HasGeminiBar reports whether bars already carry Gemini quota.
+func HasGeminiBar(bars []QuotaBar) bool {
+	for _, bar := range bars {
+		if strings.Contains(strings.ToLower(bar.Key+" "+bar.Label), "gemini") {
+			return true
+		}
+	}
+	return false
+}
+
 // Model groupings used when only per-model quota is available.
+//
+// These are upstream catalogue ids, not client ids. Keep every Gemini model the
+// dashboard lists (see visibleModels) represented here through its
+// UpstreamModelName, or its quota silently stops counting towards the bar.
 var (
 	claudeGptModelIDs = []string{
 		"claude-sonnet-4-5", "claude-sonnet-4-5-thinking", "claude-sonnet-4-6",
@@ -198,9 +216,11 @@ var (
 	geminiProModelIDs = []string{
 		"gemini-3-pro-low", "gemini-3-pro-high",
 		"gemini-3.1-pro-low", "gemini-3.1-pro-high", "gemini-2.5-pro",
+		"gemini-pro-agent",
 	}
 	geminiFlashModelIDs = []string{
 		"gemini-3-flash", "gemini-2.5-flash", "gemini-2.5-flash-thinking",
+		"gemini-3.8-flash-tiered",
 		"gemini-3.7-flash", "gemini-3.7-flash-low", "gemini-3.7-flash-medium",
 		"gemini-3.7-flash-high", "gemini-3.7-flash-tiered",
 		"gemini-3.6-flash-low", "gemini-3.6-flash-medium",
@@ -218,9 +238,31 @@ func BuildModelBars(models map[string]ModelQuota) []QuotaBar {
 	}
 }
 
-// mergedBar reports the worst remaining fraction in a group, and the soonest
-// reset among them.
+// BuildGeminiModelBar reports Gemini quota from per-model data, for accounts
+// whose summary has no Gemini group. ok is false when the catalogue lists no
+// Gemini model, so an account is never drawn with an empty 0% bar, which reads as
+// exhausted.
+//
+// It is one bar rather than a Pro and a Flash one: on these accounts every Gemini
+// model reports the same fraction and reset, because they draw on a single pool.
+// Where they did differ, the bar shows the most constrained.
+func BuildGeminiModelBar(models map[string]ModelQuota) (QuotaBar, bool) {
+	ids := append(append([]string(nil), geminiProModelIDs...), geminiFlashModelIDs...)
+	return groupBar("gemini", "Gemini", models, ids)
+}
+
+// mergedBar is groupBar for callers that want a placeholder when no model in the
+// group is present.
 func mergedBar(key, label string, models map[string]ModelQuota, ids []string) QuotaBar {
+	bar, _ := groupBar(key, label, models, ids)
+	return bar
+}
+
+// groupBar reports the worst remaining fraction in a group, and the soonest
+// reset among them. ok is false when none of the group's models are present.
+func groupBar(
+	key, label string, models map[string]ModelQuota, ids []string,
+) (QuotaBar, bool) {
 	percentage := -1
 	var resetTimes []string
 
@@ -239,14 +281,14 @@ func mergedBar(key, label string, models map[string]ModelQuota, ids []string) Qu
 	}
 
 	if percentage < 0 {
-		return QuotaBar{Key: key, Label: label}
+		return QuotaBar{Key: key, Label: label}, false
 	}
 	return QuotaBar{
 		Key:        key,
 		Label:      label,
 		Percentage: percentage,
 		ResetTime:  earliestResetTime(resetTimes),
-	}
+	}, true
 }
 
 func earliestResetTime(times []string) string {

@@ -229,7 +229,8 @@ func queryQuota(
 ) ([]antigravity.QuotaBar, error) {
 	summary, err := antigravity.FetchQuotaSummary(ctx, accessToken, projectID)
 	if err == nil {
-		return antigravity.BuildQuotaBars(summary), nil
+		bars := antigravity.BuildQuotaBars(summary)
+		return withGeminiBars(ctx, accessToken, projectID, account.ID, bars), nil
 	}
 
 	models, resolvedProject, modelErr := antigravity.FetchModels(ctx, accessToken, projectID)
@@ -242,6 +243,32 @@ func queryQuota(
 		_ = authstore.Save(*account)
 	}
 	return antigravity.BuildModelBars(models), nil
+}
+
+// withGeminiBars adds Gemini quota when the summary leaves it out.
+//
+// The summary only lists the groups an account is metered on. Some accounts get
+// just "Claude and GPT models" there and still call Gemini fine, so their Gemini
+// numbers exist only as per-model quota. This is best effort: if that call fails
+// the summary bars are shown as they are rather than failing the whole account.
+func withGeminiBars(
+	ctx context.Context, accessToken, projectID, accountID string, bars []antigravity.QuotaBar,
+) []antigravity.QuotaBar {
+	if antigravity.HasGeminiBar(bars) {
+		return bars
+	}
+
+	models, _, err := antigravity.FetchModels(ctx, accessToken, projectID)
+	if err != nil {
+		logx.Debug("Antigravity per-model quota fetch failed for %s: %v", accountID, err)
+		return bars
+	}
+	gemini, ok := antigravity.BuildGeminiModelBar(models)
+	if !ok {
+		return bars
+	}
+	// Gemini first, matching the order of the summary and of the placeholder set.
+	return append([]antigravity.QuotaBar{gemini}, bars...)
 }
 
 func asUpstream(err error, target **apperr.UpstreamError) bool {
